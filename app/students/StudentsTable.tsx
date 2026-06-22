@@ -21,6 +21,7 @@ export function StudentsTable({ students }: { students: Student[] }) {
     department: "",
   });
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function startEdit(student: Student) {
@@ -56,6 +57,36 @@ export function StudentsTable({ students }: { students: Student[] }) {
     }
 
     setEditingId(null);
+    startTransition(() => {
+      router.refresh();
+    });
+  }
+
+  async function deleteStudent(id: number, name: string) {
+    const shouldDelete = window.confirm(`Delete ${name}?`);
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    setError(null);
+    setDeletingId(id);
+
+    const response = await fetch(`/api/students/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      setError("Could not delete student. Try again.");
+      setDeletingId(null);
+      return;
+    }
+
+    if (editingId === id) {
+      setEditingId(null);
+    }
+
+    setDeletingId(null);
     startTransition(() => {
       router.refresh();
     });
@@ -181,13 +212,26 @@ export function StudentsTable({ students }: { students: Student[] }) {
                         </button>
                       </>
                     ) : (
-                      <button
-                        className="h-9 rounded-md border border-zinc-300 px-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
-                        type="button"
-                        onClick={() => startEdit(student)}
-                      >
-                        Edit
-                      </button>
+                      <>
+                        <button
+                          className="h-9 rounded-md border border-zinc-300 px-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:text-zinc-400"
+                          disabled={deletingId === student.id}
+                          type="button"
+                          onClick={() => startEdit(student)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="h-9 rounded-md border border-red-200 px-3 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:text-red-300"
+                          disabled={deletingId === student.id}
+                          type="button"
+                          onClick={() =>
+                            deleteStudent(student.id, student.name)
+                          }
+                        >
+                          {deletingId === student.id ? "Deleting" : "Delete"}
+                        </button>
+                      </>
                     )}
                   </div>
                 </td>

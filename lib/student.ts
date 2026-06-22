@@ -45,3 +45,19 @@ export function updateStudent(student: StudentUpdate) {
       student.id,
     );
 }
+
+export function deleteStudent(id: number) {
+  const db = getDb();
+  return db.prepare("DELETE FROM students WHERE id = ?").run(id);
+}
+
+export function searchStudents(query: string): Student[] {
+  const db = getDb();
+  return db
+    .prepare(
+      `
+    SELECT * FROM students
+    WHERE name LIKE ? OR email LIKE ? OR deparment LIKE ?`,
+    )
+    .all(`%${query}%`, `%${query}%`, `%${query}`) as Student[];
+}

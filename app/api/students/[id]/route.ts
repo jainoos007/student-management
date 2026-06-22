@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateStudent } from "@/lib/student";
+import { updateStudent, deleteStudent } from "@/lib/student";
 
 export async function PUT(
   request: NextRequest,
@@ -17,4 +17,13 @@ export async function PUT(
   });
 
   return NextResponse.json({ message: "Student updated successfully" });
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  ctx: { params: Promise<{ id: string }> },
+) {
+  const { id } = await ctx.params;
+  deleteStudent(Number(id));
+  return NextResponse.json({ message: "Student deleted successfully" });
 }
