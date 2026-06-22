@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { getStudents } from "@/lib/student";
+import { StudentsTable } from "./StudentsTable";
 
 export const metadata = {
   title: "Students",
@@ -46,40 +47,7 @@ export default async function StudentsPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-                <thead className="border-b border-zinc-200 bg-zinc-100 text-xs uppercase tracking-wide text-zinc-500">
-                  <tr>
-                    <th className="px-5 py-3 font-semibold">ID</th>
-                    <th className="px-5 py-3 font-semibold">Name</th>
-                    <th className="px-5 py-3 font-semibold">Email</th>
-                    <th className="px-5 py-3 font-semibold">Age</th>
-                    <th className="px-5 py-3 font-semibold">Department</th>
-                    <th className="px-5 py-3 font-semibold">Created</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100">
-                  {students.map((student) => (
-                    <tr key={student.id} className="hover:bg-zinc-50">
-                      <td className="px-5 py-4 font-mono text-xs text-zinc-500">
-                        {student.id}
-                      </td>
-                      <td className="px-5 py-4 font-medium">{student.name}</td>
-                      <td className="px-5 py-4 text-zinc-600">
-                        {student.email}
-                      </td>
-                      <td className="px-5 py-4 text-zinc-600">{student.age}</td>
-                      <td className="px-5 py-4 text-zinc-600">
-                        {student.department}
-                      </td>
-                      <td className="px-5 py-4 text-zinc-500">
-                        {student.created_at}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <StudentsTable students={students} />
           )}
         </section>
       </div>
