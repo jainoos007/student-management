@@ -57,7 +57,7 @@ export function searchStudents(query: string): Student[] {
     .prepare(
       `
     SELECT * FROM students
-    WHERE name LIKE ? OR email LIKE ? OR deparment LIKE ?`,
+    WHERE name LIKE ? OR email LIKE ? OR department LIKE ?`,
     )
-    .all(`%${query}%`, `%${query}%`, `%${query}`) as Student[];
+    .all(`%${query}%`, `%${query}%`, `%${query}%`) as Student[];
 }

@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
-import { getStudents, addStudent } from "@/lib/student";
+import { getStudents, addStudent, searchStudents } from "@/lib/student";
 
-export async function GET() {
-  const students = getStudents();
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get("query")?.trim() ?? "";
+
+  const students = query ? searchStudents(query) : getStudents();
 
   return NextResponse.json(students);
 }

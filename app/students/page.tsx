@@ -42,16 +42,7 @@ export default async function StudentsPage() {
         <StudentCreateForm />
 
         <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
-          {students.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <h2 className="text-lg font-semibold">No students found</h2>
-              <p className="mt-2 text-sm text-zinc-500">
-                Add students to the database to see them listed here.
-              </p>
-            </div>
-          ) : (
-            <StudentsTable students={students} />
-          )}
+          <StudentsTable students={students} />
         </section>
       </div>
     </main>
