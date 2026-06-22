@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
 import type { Student } from "@/types/student";
@@ -11,7 +12,21 @@ type EditableStudent = Pick<
 
 type FormState = Omit<EditableStudent, "id">;
 
-export function StudentsTable({ students }: { students: Student[] }) {
+type StudentsTableProps = {
+  currentPage: number;
+  limit: number;
+  students: Student[];
+  totalPages: number;
+  totalStudents: number;
+};
+
+export function StudentsTable({
+  currentPage,
+  limit,
+  students,
+  totalPages,
+  totalStudents,
+}: StudentsTableProps) {
   const router = useRouter();
   const [searchResults, setSearchResults] = useState<Student[] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -27,6 +42,14 @@ export function StudentsTable({ students }: { students: Student[] }) {
   const [isPending, startTransition] = useTransition();
   const [isSearching, setIsSearching] = useState(false);
   const displayedStudents = searchResults ?? students;
+  const isShowingSearchResults = searchResults !== null;
+  const pageStart =
+    totalStudents === 0 ? 0 : Math.min((currentPage - 1) * limit + 1, totalStudents);
+  const pageEnd = Math.min(currentPage * limit, totalStudents);
+
+  function getPageHref(page: number) {
+    return `/students?page=${page}&limit=${limit}`;
+  }
 
   function startEdit(student: Student) {
     setEditingId(student.id);
@@ -114,7 +137,9 @@ export function StudentsTable({ students }: { students: Student[] }) {
 
     const query = searchQuery.trim();
     const response = await fetch(
-      query ? `/api/students?query=${encodeURIComponent(query)}` : "/api/students",
+      query
+        ? `/api/students?query=${encodeURIComponent(query)}`
+        : `/api/students?page=${currentPage}&limit=${limit}`,
     );
 
     if (!response.ok) {
@@ -327,6 +352,48 @@ export function StudentsTable({ students }: { students: Student[] }) {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {!isShowingSearchResults ? (
+        <div className="flex flex-col gap-3 border-t border-zinc-200 px-5 py-4 text-sm text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            Showing {pageStart}-{pageEnd} of {totalStudents}
+          </p>
+          <div className="flex items-center gap-2">
+            {currentPage > 1 ? (
+              <Link
+                className="inline-flex h-9 items-center justify-center rounded-md border border-zinc-300 px-3 font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+                href={getPageHref(currentPage - 1)}
+              >
+                Previous
+              </Link>
+            ) : (
+              <span className="inline-flex h-9 items-center justify-center rounded-md border border-zinc-200 px-3 font-medium text-zinc-400">
+                Previous
+              </span>
+            )}
+            <span className="font-medium text-zinc-700">
+              Page {currentPage} of {totalPages}
+            </span>
+            {currentPage < totalPages ? (
+              <Link
+                className="inline-flex h-9 items-center justify-center rounded-md border border-zinc-300 px-3 font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+                href={getPageHref(currentPage + 1)}
+              >
+                Next
+              </Link>
+            ) : (
+              <span className="inline-flex h-9 items-center justify-center rounded-md border border-zinc-200 px-3 font-medium text-zinc-400">
+                Next
+              </span>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="border-t border-zinc-200 px-5 py-4 text-sm text-zinc-600">
+          Showing {displayedStudents.length} search result
+          {displayedStudents.length === 1 ? "" : "s"}
         </div>
       )}
     </div>

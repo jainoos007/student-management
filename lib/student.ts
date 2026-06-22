@@ -6,9 +6,12 @@ type StudentUpdate = Pick<
   "id" | "name" | "email" | "age" | "department"
 >;
 
-export function getStudents(): Student[] {
+export function getStudents(page: number = 1, limit: number = 10): Student[] {
+  const offset = (page - 1) * limit;
   const db = getDb();
-  return db.prepare("SELECT * FROM students").all() as Student[];
+  return db
+    .prepare(`SELECT * FROM students LIMIT ? OFFSET ?`)
+    .all(limit, offset) as Student[];
 }
 
 export function addStudent(student: Omit<Student, "id" | "created_at">) {
@@ -60,4 +63,48 @@ export function searchStudents(query: string): Student[] {
     WHERE name LIKE ? OR email LIKE ? OR department LIKE ?`,
     )
     .all(`%${query}%`, `%${query}%`, `%${query}%`) as Student[];
+}
+
+export function getTotalStudents(): number {
+  const db = getDb();
+  const result = db.prepare("SELECT COUNT(*) as count FROM students").get() as {
+    count: number;
+  };
+  return result.count;
+}
+
+export function getAverageAge(): number {
+  const db = getDb();
+  const result = db
+    .prepare("SELECT AVG(age) as average FROM students")
+    .get() as { average: number | null };
+  return result.average ?? 0;
+}
+
+export function getOldestStudent(): Student | null {
+  const db = getDb();
+  const result = db
+    .prepare(
+      `
+    SELECT * FROM students
+    ORDER BY age DESC
+    LIMIT 1
+    `,
+    )
+    .get() as Student | undefined;
+  return result ?? null;
+}
+
+export function getDepartmentStats(): { department: string; count: number }[] {
+  const db = getDb();
+  const result = db
+    .prepare(
+      `
+    SELECT department, COUNT(*) as count
+    FROM students
+    GROUP BY department
+    `,
+    )
+    .all() as { department: string; count: number }[];
+  return result;
 }
