@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { getStudents } from "@/lib/student";
+import { StudentCreateForm } from "./StudentCreateForm";
 import { StudentsTable } from "./StudentsTable";
 
 export const metadata = {
@@ -37,6 +38,8 @@ export default async function StudentsPage() {
             </div>
           </div>
         </header>
+
+        <StudentCreateForm />
 
         <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
           {students.length === 0 ? (

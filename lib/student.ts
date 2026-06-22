@@ -14,8 +14,18 @@ export function getStudents(): Student[] {
 export function addStudent(student: Omit<Student, "id" | "created_at">) {
   const db = getDb();
   const createdAt = new Date().toISOString();
-  return db.prepare(`
-      INSET INTO students (name, email, age,)`);
+  return db
+    .prepare(
+      `
+      INSERT INTO students (name, email, age, department, created_at) VALUES (?, ?, ?, ?, ?) `,
+    )
+    .run(
+      student.name,
+      student.email,
+      student.age,
+      student.department,
+      createdAt,
+    );
 }
 
 export function updateStudent(student: StudentUpdate) {
