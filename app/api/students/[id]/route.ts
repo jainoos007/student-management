@@ -8,6 +8,20 @@ export async function PUT(
   const body = await request.json();
   const { id } = await ctx.params;
 
+  if (!body.name || !body.email || !body.age || !body.department) {
+    return NextResponse.json(
+      { message: "Missing required fields" },
+      { status: 400 },
+    );
+  }
+
+  if (body.age <= 0) {
+    return NextResponse.json(
+      { message: "Age must be a positive number" },
+      { status: 400 },
+    );
+  }
+
   updateStudent({
     id: Number(id),
     name: body.name,

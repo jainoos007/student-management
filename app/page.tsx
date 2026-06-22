@@ -33,12 +33,20 @@ export default async function Home() {
               records before opening the full directory.
             </p>
           </div>
-          <Link
-            href="/students"
-            className="inline-flex h-11 items-center justify-center rounded-md bg-zinc-950 px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
-          >
-            View students
-          </Link>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/dashboard"
+              className="inline-flex h-11 items-center justify-center rounded-md bg-zinc-950 px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
+            >
+              Open dashboard
+            </Link>
+            <Link
+              href="/students"
+              className="inline-flex h-11 items-center justify-center rounded-md border border-zinc-300 px-5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+            >
+              View students
+            </Link>
+          </div>
         </header>
 
         <section className="grid gap-4 md:grid-cols-3">
