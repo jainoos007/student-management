@@ -1,4 +1,6 @@
-import db from "@/lib/db";
+import { getDb } from "@/lib/db";
+
+const db = getDb();
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS students (

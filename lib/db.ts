@@ -1,5 +1,8 @@
 import Database from "better-sqlite3";
 
-const db = new Database("database/students.db");
+let db: Database.Database | null = null;
 
-export default db;
+export function getDb() {
+  db ??= new Database("database/students.db");
+  return db;
+}
