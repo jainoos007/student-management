@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useLayoutEffect } from "react";
 import { Sun, Moon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,17 @@ export function ThemeToggle() {
     }
   }, []);
 
+  useLayoutEffect(() => {
+    // After React commits the theme change, wait for next tick to restore hover transitions
+    const timer = setTimeout(() => {
+      document.documentElement.classList.remove("disable-transitions");
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [theme]);
+
   const toggleTheme = () => {
+    document.documentElement.classList.add("disable-transitions");
+    
     if (theme === "light") {
       document.documentElement.classList.add("dark");
       localStorage.setItem("theme", "dark");
@@ -37,7 +47,7 @@ export function ThemeToggle() {
       variant="outline"
       size="icon"
       onClick={toggleTheme}
-      className="h-10 w-10 text-zinc-750 dark:text-zinc-350"
+      className="h-10 w-10 text-zinc-755 dark:text-zinc-350"
       aria-label="Toggle theme"
     >
       {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}

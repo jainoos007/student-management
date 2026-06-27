@@ -75,5 +75,12 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), sans-serif;
-  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Instantly cut all transitions during theme toggling to prevent delay mismatches */
+.disable-transitions,
+.disable-transitions *,
+.disable-transitions *:before,
+.disable-transitions *:after {
+  transition: none !important;
 }
