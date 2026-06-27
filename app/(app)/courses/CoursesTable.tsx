@@ -10,7 +10,6 @@ import {
   Trash2, 
   Edit3, 
   Loader2, 
-  Save, 
   X, 
   Check,
   ChevronLeft,
@@ -20,6 +19,18 @@ import {
   AlertCircle
 } from "lucide-react";
 import { motion } from "framer-motion";
+
+// Official Shadcn Components
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type EditableCourse = Pick<
   Course,
@@ -246,8 +257,8 @@ export function CoursesTable({
             <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 block mb-1.5 font-medium">Search Courses</span>
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
-              <input
-                className="h-10 w-full rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 pl-9 pr-3 text-sm text-zinc-850 dark:text-zinc-150 outline-none focus:border-zinc-500 dark:focus:border-zinc-650 transition-colors"
+              <Input
+                className="pl-9 pr-3 h-10 w-full"
                 placeholder="Search course name or code..."
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
@@ -256,30 +267,32 @@ export function CoursesTable({
           </div>
 
           <div className="flex gap-2">
-            <button
-              className="h-10 rounded-md bg-zinc-950 dark:bg-white dark:text-zinc-950 px-5 text-sm font-semibold text-white transition-all hover:bg-zinc-800 dark:hover:bg-zinc-100 disabled:cursor-not-allowed disabled:bg-zinc-400 flex items-center gap-1.5 shadow-sm"
+            <Button
               disabled={isSearching}
               type="submit"
+              className="h-10 px-5 text-sm font-semibold flex items-center gap-1.5 shadow-sm bg-zinc-950 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
             >
               {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               <span>Search</span>
-            </button>
-            <button
-              className="h-10 rounded-md border border-zinc-200 dark:border-zinc-850 px-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            </Button>
+            <Button
+              variant="outline"
+              className="h-10 px-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 border-zinc-205"
               type="button"
               onClick={clearSearch}
             >
               Clear
-            </button>
-            <button
-              className="h-10 rounded-md border border-zinc-200 dark:border-zinc-850 px-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:cursor-not-allowed disabled:text-zinc-400 flex items-center gap-1.5"
+            </Button>
+            <Button
+              variant="outline"
+              className="h-10 px-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 border-zinc-205 flex items-center gap-1.5"
               type="button"
               onClick={exportCSV}
               disabled={displayedCourses.length === 0}
             >
               <Download className="h-4 w-4" />
               <span>Export</span>
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -303,75 +316,57 @@ export function CoursesTable({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-              <thead className="border-b border-zinc-150 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                <tr>
-                  <th className="px-6 py-3.5 font-semibold select-none">ID</th>
-                  <th
+            <Table className="w-full min-w-[760px]">
+              <TableHeader className="bg-zinc-50/50 dark:bg-zinc-950/30">
+                <TableRow>
+                  <TableHead className="px-6 py-3.5 w-16">ID</TableHead>
+                  <TableHead
                     onClick={() => handleSort("name")}
-                    className="px-6 py-3.5 font-semibold cursor-pointer select-none hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                    className="px-6 py-3.5 cursor-pointer select-none hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white transition-colors"
                   >
                     <div className="flex items-center gap-1">
                       <span>Name</span>
                       <ArrowUpDown className="h-3 w-3 opacity-60" />
                       {sortColumn === "name" && (sortDirection === "asc" ? "↑" : "↓")}
                     </div>
-                  </th>
-                  <th
+                  </TableHead>
+                  <TableHead
                     onClick={() => handleSort("code")}
-                    className="px-6 py-3.5 font-semibold cursor-pointer select-none hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                    className="px-6 py-3.5 cursor-pointer select-none hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white transition-colors"
                   >
                     <div className="flex items-center gap-1">
                       <span>Code</span>
                       <ArrowUpDown className="h-3 w-3 opacity-60" />
                       {sortColumn === "code" && (sortDirection === "asc" ? "↑" : "↓")}
                     </div>
-                  </th>
-                  <th
+                  </TableHead>
+                  <TableHead
                     onClick={() => handleSort("credits")}
-                    className="px-6 py-3.5 font-semibold cursor-pointer select-none hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                    className="px-6 py-3.5 cursor-pointer select-none hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white transition-colors"
                   >
                     <div className="flex items-center gap-1">
                       <span>Credits</span>
                       <ArrowUpDown className="h-3 w-3 opacity-60" />
                       {sortColumn === "credits" && (sortDirection === "asc" ? "↑" : "↓")}
                     </div>
-                  </th>
-                  <th className="px-6 py-3.5 font-semibold select-none">Created At</th>
-                  <th className="px-6 py-3.5 text-right font-semibold select-none">Actions</th>
-                </tr>
-              </thead>
-              <motion.tbody 
-                variants={{
-                  hidden: { opacity: 0 },
-                  show: {
-                    opacity: 1,
-                    transition: { staggerChildren: 0.04 }
-                  }
-                }}
-                initial="hidden"
-                animate="show"
-                className="divide-y divide-zinc-150 dark:divide-zinc-800/60"
-              >
+                  </TableHead>
+                  <TableHead className="px-6 py-3.5">Created At</TableHead>
+                  <TableHead className="px-6 py-3.5 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {sortedCourses.map((course) => {
                   const isEditing = editingId === course.id;
 
                   return (
-                    <motion.tr 
-                      key={course.id}
-                      variants={{
-                        hidden: { opacity: 0, y: 8 },
-                        show: { opacity: 1, y: 0 }
-                      }}
-                      className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10 transition-colors"
-                    >
-                      <td className="px-6 py-4 font-mono text-xs font-semibold text-zinc-400 dark:text-zinc-500">
+                    <TableRow key={course.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10 transition-colors">
+                      <TableCell className="px-6 py-4 font-mono text-xs font-semibold text-zinc-400 dark:text-zinc-500">
                         #{course.id}
-                      </td>
-                      <td className="px-6 py-4">
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
                         {isEditing ? (
-                          <input
-                            className="h-9 w-full rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-sm text-zinc-850 dark:text-zinc-150 outline-none focus:border-zinc-500"
+                          <Input
+                            className="h-9 w-full"
                             value={form.name}
                             onChange={(event) =>
                               setForm((current) => ({
@@ -383,11 +378,11 @@ export function CoursesTable({
                         ) : (
                           <span className="font-semibold text-zinc-900 dark:text-zinc-100">{course.name}</span>
                         )}
-                      </td>
-                      <td className="px-6 py-4">
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
                         {isEditing ? (
-                          <input
-                            className="h-9 w-32 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-sm text-zinc-850 dark:text-zinc-150 outline-none focus:border-zinc-500"
+                          <Input
+                            className="h-9 w-32"
                             value={form.code}
                             onChange={(event) =>
                               setForm((current) => ({
@@ -401,11 +396,11 @@ export function CoursesTable({
                             {course.code}
                           </span>
                         )}
-                      </td>
-                      <td className="px-6 py-4 text-zinc-650 dark:text-zinc-450 font-medium">
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-zinc-650 dark:text-zinc-450 font-medium">
                         {isEditing ? (
-                          <input
-                            className="h-9 w-20 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-sm text-zinc-850 dark:text-zinc-150 outline-none focus:border-zinc-500"
+                          <Input
+                            className="h-9 w-20"
                             min={1}
                             type="number"
                             value={form.credits}
@@ -419,46 +414,49 @@ export function CoursesTable({
                         ) : (
                           <span>{course.credits} Credits</span>
                         )}
-                      </td>
-                      <td className="px-6 py-4 text-xs text-zinc-400 dark:text-zinc-500 font-medium">
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-xs text-zinc-400 dark:text-zinc-500 font-medium">
                         {new Date(course.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4">
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
                         <div className="flex justify-end gap-2">
                           {isEditing ? (
                             <>
-                              <button
-                                className="h-8 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white px-3 text-xs font-semibold transition-all flex items-center gap-1 shadow-sm"
+                              <Button
+                                className="h-8 bg-emerald-600 hover:bg-emerald-500 text-white px-3 text-xs font-semibold transition-all flex items-center gap-1 shadow-sm"
                                 disabled={isPending}
                                 type="button"
                                 onClick={() => saveCourse(course.id)}
                               >
                                 {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                                 <span>Save</span>
-                              </button>
-                              <button
-                                className="h-8 rounded-md border border-zinc-200 dark:border-zinc-850 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center gap-1"
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className="h-8 border-zinc-200 dark:border-zinc-850 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center gap-1"
                                 disabled={isPending}
                                 type="button"
                                 onClick={cancelEdit}
                               >
                                 <X className="h-3.5 w-3.5" />
                                 <span>Cancel</span>
-                              </button>
+                              </Button>
                             </>
                           ) : (
                             <>
-                              <button
-                                className="h-8 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center gap-1"
+                              <Button
+                                variant="outline"
+                                className="h-8 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center gap-1"
                                 disabled={deletingId === course.id}
                                 type="button"
                                 onClick={() => startEdit(course)}
                               >
                                 <Edit3 className="h-3.5 w-3.5 text-zinc-450" />
                                 <span>Edit</span>
-                              </button>
-                              <button
-                                className="h-8 rounded-md border border-red-150 dark:border-red-950 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-750 transition-all flex items-center gap-1"
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className="h-8 border-red-150 dark:border-red-955 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-750 transition-all flex items-center gap-1"
                                 disabled={deletingId === course.id}
                                 type="button"
                                 onClick={() =>
@@ -471,16 +469,16 @@ export function CoursesTable({
                                   <Trash2 className="h-3.5 w-3.5 text-red-400" />
                                 )}
                                 <span>Delete</span>
-                              </button>
+                              </Button>
                             </>
                           )}
                         </div>
-                      </td>
-                    </motion.tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </motion.tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>
@@ -501,7 +499,7 @@ export function CoursesTable({
                 <span>Prev</span>
               </Link>
             ) : (
-              <span className="inline-flex h-9 items-center justify-center rounded-lg border border-zinc-100 dark:border-zinc-850 px-3 text-xs font-semibold text-zinc-400 dark:text-zinc-650 cursor-not-allowed bg-zinc-50 dark:bg-zinc-900 flex items-center gap-1">
+              <span className="inline-flex h-9 items-center justify-center rounded-lg border border-zinc-100 dark:border-zinc-850 px-3 text-xs font-semibold text-zinc-400 dark:text-zinc-650 cursor-not-allowed bg-zinc-50 dark:bg-zinc-950 flex items-center gap-1">
                 <ChevronLeft className="h-3.5 w-3.5" />
                 <span>Prev</span>
               </span>
@@ -518,7 +516,7 @@ export function CoursesTable({
                 <ChevronRight className="h-3.5 w-3.5" />
               </Link>
             ) : (
-              <span className="inline-flex h-9 items-center justify-center rounded-lg border border-zinc-100 dark:border-zinc-850 px-3 text-xs font-semibold text-zinc-400 dark:text-zinc-650 cursor-not-allowed bg-zinc-50 dark:bg-zinc-900 flex items-center gap-1">
+              <span className="inline-flex h-9 items-center justify-center rounded-lg border border-zinc-100 dark:border-zinc-850 px-3 text-xs font-semibold text-zinc-400 dark:text-zinc-650 cursor-not-allowed bg-zinc-50 dark:bg-zinc-950 flex items-center gap-1">
                 <span>Next</span>
                 <ChevronRight className="h-3.5 w-3.5" />
               </span>

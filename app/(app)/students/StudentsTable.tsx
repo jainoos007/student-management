@@ -14,7 +14,6 @@ import {
   BookOpen, 
   Printer, 
   Loader2, 
-  Save, 
   X, 
   Check,
   ChevronLeft,
@@ -22,7 +21,35 @@ import {
   Filter,
   AlertCircle
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+
+// Official Shadcn Components
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog";
 
 type EditableStudent = Pick<
   Student,
@@ -57,7 +84,7 @@ export function StudentsTable({
   const [modalError, setModalError] = useState<string | null>(null);
 
   const [allCourses, setAllCourses] = useState<Course[]>([]);
-  const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>("");
+  const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>("all-courses");
 
   useEffect(() => {
     async function loadAllCourses() {
@@ -106,21 +133,24 @@ export function StudentsTable({
     }
   }
 
-  async function handleCourseFilterChange(courseId: string) {
-    setSelectedCourseFilter(courseId);
+  async function handleCourseFilterChange(courseId: string | null) {
+    const val = courseId ?? "all-courses";
+    setSelectedCourseFilter(val);
     setSearchQuery("");
     setError(null);
     setEditingId(null);
     setIsSearching(true);
 
-    if (!courseId) {
+    const filterVal = val === "all-courses" ? "" : val;
+
+    if (!filterVal) {
       setSearchResults(null);
       setIsSearching(false);
       return;
     }
 
     try {
-      const response = await fetch(`/api/students?courseId=${courseId}`);
+      const response = await fetch(`/api/students?courseId=${filterVal}`);
       if (!response.ok) {
         throw new Error("Could not filter students. Try again.");
       }
@@ -416,7 +446,7 @@ export function StudentsTable({
 
   function clearSearch() {
     setSearchQuery("");
-    setSelectedCourseFilter("");
+    setSelectedCourseFilter("all-courses");
     setSearchResults(null);
     setError(null);
     setEditingId(null);
@@ -434,8 +464,8 @@ export function StudentsTable({
             <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 block mb-1.5 font-medium">Query Input</span>
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
-              <input
-                className="h-10 w-full rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 pl-9 pr-3 text-sm text-zinc-850 dark:text-zinc-150 outline-none focus:border-zinc-500 dark:focus:border-zinc-650 transition-colors"
+              <Input
+                className="pl-9 pr-3 h-10 w-full"
                 placeholder="Search name, email, or department..."
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
@@ -448,45 +478,48 @@ export function StudentsTable({
               <Filter className="h-3 w-3" />
               Filter by Course
             </span>
-            <select
-              value={selectedCourseFilter}
-              onChange={(e) => handleCourseFilterChange(e.target.value)}
-              className="h-10 w-full rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-sm text-zinc-700 dark:text-zinc-300 outline-none focus:border-zinc-500 dark:focus:border-zinc-650 transition-colors"
-            >
-              <option value="">All Courses</option>
-              {allCourses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.code} - {c.name}
-                </option>
-              ))}
-            </select>
+            <Select value={selectedCourseFilter} onValueChange={handleCourseFilterChange}>
+              <SelectTrigger className="w-full h-10 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300">
+                <SelectValue placeholder="All Courses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all-courses">All Courses</SelectItem>
+                {allCourses.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.code} - {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex gap-2">
-            <button
-              className="h-10 rounded-md bg-zinc-950 dark:bg-white dark:text-zinc-950 px-5 text-sm font-semibold text-white transition-all hover:bg-zinc-800 dark:hover:bg-zinc-100 disabled:cursor-not-allowed disabled:bg-zinc-400 flex items-center gap-1.5 shadow-sm"
+            <Button
               disabled={isSearching}
               type="submit"
+              className="h-10 px-5 text-sm font-semibold flex items-center gap-1.5 shadow-sm bg-zinc-950 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
             >
               {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               <span>Search</span>
-            </button>
-            <button
-              className="h-10 rounded-md border border-zinc-200 dark:border-zinc-850 px-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            </Button>
+            <Button
+              variant="outline"
+              className="h-10 px-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 border-zinc-205"
               type="button"
               onClick={clearSearch}
             >
               Clear
-            </button>
-            <button
-              className="h-10 rounded-md border border-zinc-200 dark:border-zinc-850 px-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:cursor-not-allowed disabled:text-zinc-400 flex items-center gap-1.5"
+            </Button>
+            <Button
+              variant="outline"
+              className="h-10 px-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 border-zinc-205 flex items-center gap-1.5"
               type="button"
               onClick={exportCSV}
               disabled={displayedStudents.length === 0}
             >
               <Download className="h-4 w-4" />
               <span>Export</span>
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -510,49 +543,31 @@ export function StudentsTable({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] border-collapse text-left text-sm">
-              <thead className="border-b border-zinc-150 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                <tr>
-                  <th className="px-6 py-3.5 font-semibold">ID</th>
-                  <th className="px-6 py-3.5 font-semibold">Name</th>
-                  <th className="px-6 py-3.5 font-semibold">Email</th>
-                  <th className="px-6 py-3.5 font-semibold">Age</th>
-                  <th className="px-6 py-3.5 font-semibold">Department</th>
-                  <th className="px-6 py-3.5 font-semibold">Created</th>
-                  <th className="px-6 py-3.5 text-right font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <motion.tbody 
-                variants={{
-                  hidden: { opacity: 0 },
-                  show: {
-                    opacity: 1,
-                    transition: { staggerChildren: 0.04 }
-                  }
-                }}
-                initial="hidden"
-                animate="show"
-                className="divide-y divide-zinc-150 dark:divide-zinc-800/60"
-              >
+            <Table className="w-full min-w-[860px]">
+              <TableHeader className="bg-zinc-50/50 dark:bg-zinc-950/30">
+                <TableRow>
+                  <TableHead className="px-6 py-3.5 w-16">ID</TableHead>
+                  <TableHead className="px-6 py-3.5">Name</TableHead>
+                  <TableHead className="px-6 py-3.5">Email</TableHead>
+                  <TableHead className="px-6 py-3.5">Age</TableHead>
+                  <TableHead className="px-6 py-3.5">Department</TableHead>
+                  <TableHead className="px-6 py-3.5">Created</TableHead>
+                  <TableHead className="px-6 py-3.5 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {displayedStudents.map((student) => {
                   const isEditing = editingId === student.id;
 
                   return (
-                    <motion.tr 
-                      key={student.id} 
-                      variants={{
-                        hidden: { opacity: 0, y: 8 },
-                        show: { opacity: 1, y: 0 }
-                      }}
-                      className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10 transition-colors"
-                    >
-                      <td className="px-6 py-4 font-mono text-xs font-semibold text-zinc-400 dark:text-zinc-500">
+                    <TableRow key={student.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10 transition-colors">
+                      <TableCell className="px-6 py-4 font-mono text-xs font-semibold text-zinc-400 dark:text-zinc-500">
                         #{student.id}
-                      </td>
-                      <td className="px-6 py-4">
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
                         {isEditing ? (
-                          <input
-                            className="h-9 w-full rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-sm text-zinc-800 dark:text-zinc-200 outline-none focus:border-zinc-500"
+                          <Input
+                            className="h-9 w-full"
                             value={form.name}
                             onChange={(event) =>
                               setForm((current) => ({
@@ -564,11 +579,11 @@ export function StudentsTable({
                         ) : (
                           <span className="font-semibold text-zinc-900 dark:text-zinc-100">{student.name}</span>
                         )}
-                      </td>
-                      <td className="px-6 py-4 text-zinc-650 dark:text-zinc-450">
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-zinc-650 dark:text-zinc-450">
                         {isEditing ? (
-                          <input
-                            className="h-9 w-full rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-sm text-zinc-800 dark:text-zinc-200 outline-none focus:border-zinc-500"
+                          <Input
+                            className="h-9 w-full"
                             type="email"
                             value={form.email}
                             onChange={(event) =>
@@ -581,11 +596,11 @@ export function StudentsTable({
                         ) : (
                           student.email
                         )}
-                      </td>
-                      <td className="px-6 py-4 text-zinc-650 dark:text-zinc-450 font-medium">
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-zinc-650 dark:text-zinc-450 font-medium">
                         {isEditing ? (
-                          <input
-                            className="h-9 w-20 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-sm text-zinc-800 dark:text-zinc-200 outline-none focus:border-zinc-500"
+                          <Input
+                            className="h-9 w-20"
                             min={1}
                             type="number"
                             value={form.age}
@@ -599,11 +614,11 @@ export function StudentsTable({
                         ) : (
                           student.age
                         )}
-                      </td>
-                      <td className="px-6 py-4 text-zinc-650 dark:text-zinc-450">
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-zinc-650 dark:text-zinc-450">
                         {isEditing ? (
-                          <input
-                            className="h-9 w-full rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-sm text-zinc-800 dark:text-zinc-200 outline-none focus:border-zinc-500"
+                          <Input
+                            className="h-9 w-full"
                             value={form.department}
                             onChange={(event) =>
                               setForm((current) => ({
@@ -613,59 +628,63 @@ export function StudentsTable({
                             }
                           />
                         ) : (
-                          <span className="inline-flex items-center rounded-md bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 text-xs font-semibold text-zinc-600 dark:text-zinc-300 border border-zinc-200/10">
+                          <Badge variant="outline" className="border-zinc-200/50 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 font-semibold px-2.5 py-1">
                             {student.department}
-                          </span>
+                          </Badge>
                         )}
-                      </td>
-                      <td className="px-6 py-4 text-xs text-zinc-400 dark:text-zinc-500 font-medium">
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-xs text-zinc-400 dark:text-zinc-500 font-medium">
                         {new Date(student.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4">
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
                         <div className="flex justify-end gap-2">
                           {isEditing ? (
                             <>
-                              <button
-                                className="h-8 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white px-3 text-xs font-semibold transition-all flex items-center gap-1 shadow-sm"
+                              <Button
+                                className="h-8 bg-emerald-600 hover:bg-emerald-500 text-white px-3 text-xs font-semibold transition-all flex items-center gap-1 shadow-sm"
                                 disabled={isPending}
                                 type="button"
                                 onClick={() => saveStudent(student.id)}
                               >
                                 {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                                 <span>Save</span>
-                              </button>
-                              <button
-                                className="h-8 rounded-md border border-zinc-200 dark:border-zinc-850 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center gap-1"
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className="h-8 border-zinc-200 dark:border-zinc-850 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center gap-1"
                                 disabled={isPending}
                                 type="button"
                                 onClick={cancelEdit}
                               >
                                 <X className="h-3.5 w-3.5" />
                                 <span>Cancel</span>
-                              </button>
+                              </Button>
                             </>
                           ) : (
                             <>
-                              <button
-                                className="h-8 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-600 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center gap-1"
+                              <Button
+                                variant="outline"
+                                className="h-8 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center gap-1"
                                 disabled={deletingId === student.id}
                                 type="button"
                                 onClick={() => startEdit(student)}
                               >
                                 <Edit3 className="h-3.5 w-3.5 text-zinc-450" />
                                 <span>Edit</span>
-                              </button>
-                              <button
-                                className="h-8 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-600 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center gap-1"
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className="h-8 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center gap-1"
                                 disabled={deletingId === student.id}
                                 type="button"
                                 onClick={() => openEnrollmentModal(student)}
                               >
-                                <BookOpen className="h-3.5 w-3.5 text-zinc-455" />
+                                <BookOpen className="h-3.5 w-3.5 text-zinc-450" />
                                 <span>Courses</span>
-                              </button>
-                              <button
-                                className="h-8 rounded-md border border-red-150 dark:border-red-950 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-750 transition-all flex items-center gap-1"
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className="h-8 border-red-150 dark:border-red-950 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-750 transition-all flex items-center gap-1"
                                 disabled={deletingId === student.id}
                                 type="button"
                                 onClick={() =>
@@ -678,16 +697,16 @@ export function StudentsTable({
                                   <Trash2 className="h-3.5 w-3.5 text-red-400" />
                                 )}
                                 <span>Delete</span>
-                              </button>
+                              </Button>
                             </>
                           )}
                         </div>
-                      </td>
-                    </motion.tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </motion.tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>
@@ -734,131 +753,122 @@ export function StudentsTable({
         </div>
       )}
 
-      {/* Slide / Spring Dialog Overlay for Course Enrollment */}
-      <AnimatePresence>
+      {/* Official Shadcn Dialog Overlay for Course Enrollment */}
+      <Dialog open={activeStudent !== null} onOpenChange={(open) => { if (!open) setActiveStudent(null) }}>
         {activeStudent && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-all">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ type: "spring", duration: 0.38 }}
-              className="relative w-full max-w-lg rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-2xl text-zinc-955 dark:text-zinc-50 transition-colors"
-            >
-              <button
-                onClick={() => setActiveStudent(null)}
-                className="absolute right-4 top-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-                aria-label="Close modal"
-              >
-                <X className="h-5 w-5" />
-              </button>
-
-              <h2 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+          <DialogContent className="sm:max-w-lg bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                 <GraduationCap className="h-5 w-5 text-indigo-500" />
                 <span>Course Enrollment</span>
-              </h2>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1 font-medium">
-                Manage enrolled courses and transcripts for <strong className="text-zinc-905 dark:text-zinc-100 font-semibold">{activeStudent.name}</strong>
-              </p>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">
+                Manage enrolled courses and transcripts for <strong className="text-zinc-900 dark:text-zinc-100 font-semibold">{activeStudent.name}</strong>
+              </DialogDescription>
+            </DialogHeader>
 
-              {modalError && (
-                <div className="mt-4 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-955/20 px-3.5 py-2.5 text-xs text-red-700 dark:text-red-400 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>{modalError}</span>
-                </div>
-              )}
+            {modalError && (
+              <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-955/20 px-3.5 py-2.5 text-xs text-red-700 dark:text-red-400 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{modalError}</span>
+              </div>
+            )}
 
-              {/* Enrolled Courses Block */}
-              <div className="mt-6">
-                <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-2 mb-2">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Enrolled Courses ({studentCourses.length})</h3>
-                  {studentCourses.length > 0 && (
-                    <button
-                      onClick={printTranscript}
-                      className="text-xs font-semibold text-zinc-700 dark:text-zinc-350 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-850 flex items-center gap-1 shadow-sm bg-white dark:bg-zinc-900"
-                    >
-                      <Printer className="h-3.5 w-3.5" />
-                      <span>Print Transcript</span>
-                    </button>
-                  )}
-                </div>
-
-                {modalLoading ? (
-                  <p className="text-xs text-zinc-450 dark:text-zinc-500 italic py-3 flex items-center gap-1.5 justify-center">
-                    <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
-                    <span>Loading student records...</span>
-                  </p>
-                ) : studentCourses.length === 0 ? (
-                  <p className="text-xs text-zinc-450 dark:text-zinc-500 italic py-6 text-center">
-                    This student is not enrolled in any courses yet.
-                  </p>
-                ) : (
-                  <ul className="divide-y divide-zinc-100 dark:divide-zinc-800/80 max-h-48 overflow-y-auto border border-zinc-200/60 dark:border-zinc-800/60 rounded-lg bg-zinc-50/20 dark:bg-zinc-950/20">
-                    {studentCourses.map((course) => (
-                      <li key={course.id} className="flex items-center justify-between px-3 py-2.5 text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-zinc-850 dark:text-zinc-150">{course.name}</span>
-                          <span className="font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-550 dark:text-zinc-400 text-[9px] px-1.5 py-0.5 rounded font-bold">{course.code}</span>
-                          <span className="text-[10px] text-zinc-400">{course.credits} cr</span>
-                        </div>
-                        <button
-                          onClick={() => unenrollFromCourse(course.enrollment_id)}
-                          className="text-[10px] font-bold text-red-650 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors"
-                        >
-                          Remove
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+            {/* Enrolled Courses Block */}
+            <div className="mt-4">
+              <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-2 mb-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Enrolled Courses ({studentCourses.length})</h3>
+                {studentCourses.length > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={printTranscript}
+                    className="h-8 px-2.5 text-xs font-semibold flex items-center gap-1 shadow-sm bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                  >
+                    <Printer className="h-3.5 w-3.5" />
+                    <span>Print Transcript</span>
+                  </Button>
                 )}
               </div>
 
-              {/* Add Enrollment Block */}
-              {!modalLoading && (
-                <form onSubmit={enrollInCourse} className="mt-6 pt-5 border-t border-zinc-100 dark:border-zinc-800">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-2">Enroll in a new course</h3>
-                  {availableCourses.length === 0 ? (
-                    <p className="text-xs text-zinc-400 dark:text-zinc-500 italic py-2">
-                      Student is already enrolled in all catalog courses.
-                    </p>
-                  ) : (
-                    <div className="flex gap-2">
-                      <select
-                        value={selectedCourseId}
-                        onChange={(e) => setSelectedCourseId(e.target.value)}
-                        required
-                        className="h-10 flex-1 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-xs text-zinc-800 dark:text-zinc-200 outline-none focus:border-zinc-500"
+              {modalLoading ? (
+                <p className="text-xs text-zinc-450 dark:text-zinc-500 italic py-3 flex items-center gap-1.5 justify-center">
+                  <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+                  <span>Loading student records...</span>
+                </p>
+              ) : studentCourses.length === 0 ? (
+                <p className="text-xs text-zinc-450 dark:text-zinc-500 italic py-6 text-center">
+                  This student is not enrolled in any courses yet.
+                </p>
+              ) : (
+                <ul className="divide-y divide-zinc-100 dark:divide-zinc-800/80 max-h-48 overflow-y-auto border border-zinc-200/60 dark:border-zinc-800/60 rounded-lg bg-zinc-50/20 dark:bg-zinc-950/20">
+                  {studentCourses.map((course) => (
+                    <li key={course.id} className="flex items-center justify-between px-3 py-2.5 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-zinc-850 dark:text-zinc-150">{course.name}</span>
+                        <span className="font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-550 dark:text-zinc-400 text-[9px] px-1.5 py-0.5 rounded font-bold">{course.code}</span>
+                        <span className="text-[10px] text-zinc-400">{course.credits} cr</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        onClick={() => unenrollFromCourse(course.enrollment_id)}
+                        className="h-7 text-[10px] font-bold text-red-650 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 p-0 bg-transparent hover:bg-transparent"
                       >
-                        {availableCourses.map((course) => (
-                          <option key={course.id} value={course.id}>
-                            {course.code} - {course.name} ({course.credits} Credits)
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="submit"
-                        disabled={!selectedCourseId}
-                        className="h-10 rounded-md bg-zinc-950 dark:bg-white dark:text-zinc-950 px-4 text-xs font-semibold text-white transition-all hover:bg-zinc-800 dark:hover:bg-zinc-100 disabled:cursor-not-allowed disabled:bg-zinc-350"
-                      >
-                        Enroll
-                      </button>
-                    </div>
-                  )}
-                </form>
+                        Remove
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
               )}
+            </div>
 
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => setActiveStudent(null)}
-                  className="h-9 rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 text-xs font-semibold text-zinc-650 dark:text-zinc-305 hover:bg-zinc-50 dark:hover:bg-zinc-850 transition-colors shadow-sm bg-white dark:bg-zinc-900"
-                >
-                  Close
-                </button>
-              </div>
-            </motion.div>
-          </div>
+            {/* Add Enrollment Block */}
+            {!modalLoading && (
+              <form onSubmit={enrollInCourse} className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-2">Enroll in a new course</h3>
+                {availableCourses.length === 0 ? (
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 italic py-2">
+                    Student is already enrolled in all catalog courses.
+                  </p>
+                ) : (
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <Select value={selectedCourseId} onValueChange={(val) => setSelectedCourseId(val ?? "")}>
+                        <SelectTrigger className="w-full h-10 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200">
+                          <SelectValue placeholder="Select course..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableCourses.map((course) => (
+                            <SelectItem key={course.id} value={String(course.id)}>
+                              {course.code} - {course.name} ({course.credits} Credits)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={!selectedCourseId}
+                      className="h-10 bg-zinc-950 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100 px-4 text-xs font-semibold shadow-sm"
+                    >
+                      Enroll
+                    </Button>
+                  </div>
+                )}
+              </form>
+            )}
+
+            <DialogFooter className="mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setActiveStudent(null)}
+                className="h-9 px-4 text-xs font-semibold text-zinc-650 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-850 shadow-sm"
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
         )}
-      </AnimatePresence>
+      </Dialog>
     </div>
   );
 }

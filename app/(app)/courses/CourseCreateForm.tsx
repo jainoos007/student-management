@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, BookOpen, AlertCircle, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 
 type CreateCourseFormState = {
   name: string;
@@ -73,11 +76,12 @@ export function CourseCreateForm() {
   }
 
   return (
-    <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden transition-colors duration-350">
+    <Card className="overflow-hidden border-zinc-200/80 dark:border-zinc-800/80 shadow-sm transition-colors duration-350">
       {/* Header section with toggle */}
       <button
+        type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-6 py-5 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-all text-left"
+        className="w-full flex items-center justify-between px-6 py-5 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-all text-left outline-none"
       >
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-lg bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 flex items-center justify-center shadow-sm">
@@ -102,88 +106,87 @@ export function CourseCreateForm() {
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.25, ease: "easeInOut" }}
           >
-            <form onSubmit={createCourse} className="border-t border-zinc-100 dark:border-zinc-800/60 p-6 bg-zinc-50/30 dark:bg-zinc-950/20">
-              {error && (
-                <div className="mb-4 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-955/25 px-4 py-3 text-xs text-red-700 dark:text-red-400 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>{error}</span>
+            <CardContent className="border-t border-zinc-100 dark:border-zinc-800/60 p-6 bg-zinc-50/30 dark:bg-zinc-950/20">
+              <form onSubmit={createCourse}>
+                {error && (
+                  <div className="mb-4 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-955/25 px-4 py-3 text-xs text-red-700 dark:text-red-400 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_auto] items-end">
+                  <label className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                    Course Name
+                    <Input
+                      required
+                      placeholder="e.g., Introduction to Computer Science"
+                      value={form.name}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          name: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                  
+                  <label className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                    Course Code
+                    <Input
+                      required
+                      placeholder="e.g., CS101"
+                      value={form.code}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          code: event.target.value.toUpperCase(),
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                    Credits
+                    <Input
+                      min={1}
+                      max={10}
+                      required
+                      type="number"
+                      placeholder="e.g., 3"
+                      value={form.credits}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          credits: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <Button
+                    disabled={isPending}
+                    type="submit"
+                    className="h-10 px-5 text-sm font-semibold shadow-sm flex items-center justify-center gap-1.5 whitespace-nowrap bg-zinc-950 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
+                  >
+                    {isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Creating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4" />
+                        <span>Create Course</span>
+                      </>
+                    )}
+                  </Button>
                 </div>
-              )}
-
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_auto] items-end">
-                <label className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                  Course Name
-                  <input
-                    className="h-10 w-full rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-sm text-zinc-800 dark:text-zinc-200 outline-none focus:border-zinc-500 dark:focus:border-zinc-650 transition-colors"
-                    required
-                    placeholder="e.g., Introduction to Computer Science"
-                    value={form.name}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        name: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                
-                <label className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                  Course Code
-                  <input
-                    className="h-10 w-full rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-sm text-zinc-800 dark:text-zinc-200 outline-none focus:border-zinc-500 dark:focus:border-zinc-650 transition-colors"
-                    required
-                    placeholder="e.g., CS101"
-                    value={form.code}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        code: event.target.value.toUpperCase(),
-                      }))
-                    }
-                  />
-                </label>
-
-                <label className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                  Credits
-                  <input
-                    className="h-10 w-full rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-sm text-zinc-800 dark:text-zinc-200 outline-none focus:border-zinc-500 dark:focus:border-zinc-650 transition-colors"
-                    min={1}
-                    max={10}
-                    required
-                    type="number"
-                    placeholder="e.g., 3"
-                    value={form.credits}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        credits: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
-
-                <button
-                  className="h-10 rounded-md bg-zinc-950 dark:bg-white dark:text-zinc-950 px-5 text-sm font-semibold text-white transition-all hover:bg-zinc-800 dark:hover:bg-zinc-100 disabled:cursor-not-allowed disabled:bg-zinc-400 dark:disabled:bg-zinc-700 shadow-sm flex items-center justify-center gap-1.5 whitespace-nowrap"
-                  disabled={isPending}
-                  type="submit"
-                >
-                  {isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Creating...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4" />
-                      <span>Create Course</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
+              </form>
+            </CardContent>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </Card>
   );
 }

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Sun, Moon } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+
 export function ThemeToggle() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
@@ -31,12 +33,14 @@ export function ThemeToggle() {
   };
 
   return (
-    <button
+    <Button
+      variant="outline"
+      size="icon"
       onClick={toggleTheme}
-      className="flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
+      className="h-10 w-10 text-zinc-750 dark:text-zinc-350"
       aria-label="Toggle theme"
     >
       {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-    </button>
+    </Button>
   );
 }
