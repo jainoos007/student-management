@@ -2,11 +2,11 @@ import { connection } from "next/server";
 import { getCourses, getTotalCourses } from "@/lib/course";
 import { CourseCreateForm } from "./CourseCreateForm";
 import { CoursesTable } from "./CoursesTable";
-import Link from "next/link";
+import { BookOpen } from "lucide-react";
 
 export const metadata = {
-  title: "Courses",
-  description: "Course catalog and directory",
+  title: "Courses - EduSuite",
+  description: "Academic course directory and catalog listings",
 };
 
 function getParam(value: string | string[] | undefined) {
@@ -33,32 +33,38 @@ export default async function CoursesPage({
   const courses = getCourses(page, limit);
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-6 py-10 text-zinc-950 sm:px-10 lg:px-16">
+    <main className="p-6 sm:p-8 lg:p-10 text-zinc-950 dark:text-zinc-50 min-h-screen">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        
+        {/* Page Header */}
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-zinc-200/60 dark:border-zinc-800/60 pb-6">
           <div>
-            <div className="flex items-center gap-2">
-              <Link href="/dashboard" className="text-sm font-medium text-zinc-500 hover:text-zinc-800">
-                Dashboard
-              </Link>
-              <span className="text-zinc-400">/</span>
-              <span className="text-sm font-medium text-zinc-700">Courses</span>
-            </div>
-            <h1 className="mt-2 text-3xl font-semibold tracking-normal sm:text-4xl">
+            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+              Curriculum Management
+            </p>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
               Course Catalog
             </h1>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:min-w-44">
-            <div className="rounded-lg border border-zinc-200 bg-white p-4">
-              <p className="text-sm text-zinc-500">Total Courses</p>
-              <p className="mt-1 text-2xl font-semibold">{totalCourses}</p>
+          
+          <div className="sm:min-w-56">
+            <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 dark:text-zinc-500">Active Courses</p>
+                <p className="mt-0.5 text-2xl font-bold text-zinc-900 dark:text-white leading-none">{totalCourses}</p>
+              </div>
+              <div className="h-8 w-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <BookOpen className="h-4 w-4" />
+              </div>
             </div>
           </div>
         </header>
 
+        {/* Creation drawer */}
         <CourseCreateForm />
 
-        <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+        {/* Directory Listings Table */}
+        <section>
           <CoursesTable
             currentPage={page}
             limit={limit}
@@ -71,3 +77,4 @@ export default async function CoursesPage({
     </main>
   );
 }
+
