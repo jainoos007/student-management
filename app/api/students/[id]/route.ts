@@ -30,7 +30,10 @@ export async function PUT(
     department: body.department,
   });
 
-  return NextResponse.json({ message: "Student updated successfully" });
+  return NextResponse.json(
+    { message: "Student updated successfully" },
+    { status: 201 },
+  );
 }
 
 export async function DELETE(
@@ -39,5 +42,10 @@ export async function DELETE(
 ) {
   const { id } = await ctx.params;
   deleteStudent(Number(id));
-  return NextResponse.json({ message: "Student deleted successfully" });
+  return NextResponse.json(
+    {
+      message: "Student deleted successfully",
+    },
+    { status: 204 },
+  );
 }
