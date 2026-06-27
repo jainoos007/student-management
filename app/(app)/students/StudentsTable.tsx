@@ -86,6 +86,9 @@ export function StudentsTable({
   const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>("all-courses");
 
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>("all-departments");
+
   useEffect(() => {
     async function loadAllCourses() {
       try {
@@ -98,7 +101,19 @@ export function StudentsTable({
         console.error("Failed to load courses for filter", err);
       }
     }
+    async function loadDepartments() {
+      try {
+        const res = await fetch("/api/departments");
+        if (res.ok) {
+          const data = await res.json();
+          setDepartments(data);
+        }
+      } catch (err) {
+        console.error("Failed to load departments for filter", err);
+      }
+    }
     loadAllCourses();
+    loadDepartments();
   }, []);
 
   async function openEnrollmentModal(student: Student) {
@@ -136,6 +151,7 @@ export function StudentsTable({
   async function handleCourseFilterChange(courseId: string | null) {
     const val = courseId ?? "all-courses";
     setSelectedCourseFilter(val);
+    setSelectedDeptFilter("all-departments");
     setSearchQuery("");
     setError(null);
     setEditingId(null);
@@ -151,6 +167,37 @@ export function StudentsTable({
 
     try {
       const response = await fetch(`/api/students?courseId=${filterVal}`);
+      if (!response.ok) {
+        throw new Error("Could not filter students. Try again.");
+      }
+      const results = (await response.json()) as Student[];
+      setSearchResults(results);
+      setIsSearching(false);
+    } catch (err: any) {
+      setError(err.message || "Could not filter students.");
+      setIsSearching(false);
+    }
+  }
+
+  async function handleDeptFilterChange(dept: string | null) {
+    const val = dept ?? "all-departments";
+    setSelectedDeptFilter(val);
+    setSelectedCourseFilter("all-courses");
+    setSearchQuery("");
+    setError(null);
+    setEditingId(null);
+    setIsSearching(true);
+
+    const filterVal = val === "all-departments" ? "" : val;
+
+    if (!filterVal) {
+      setSearchResults(null);
+      setIsSearching(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/students?department=${encodeURIComponent(filterVal)}`);
       if (!response.ok) {
         throw new Error("Could not filter students. Try again.");
       }
@@ -447,6 +494,7 @@ export function StudentsTable({
   function clearSearch() {
     setSearchQuery("");
     setSelectedCourseFilter("all-courses");
+    setSelectedDeptFilter("all-departments");
     setSearchResults(null);
     setError(null);
     setEditingId(null);
@@ -461,7 +509,6 @@ export function StudentsTable({
           onSubmit={searchStudents}
         >
           <div className="relative flex-1">
-            <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 block mb-1.5 font-medium">Query Input</span>
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
               <Input
@@ -473,20 +520,43 @@ export function StudentsTable({
             </div>
           </div>
 
-          <div className="sm:w-64">
-            <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 block mb-1.5 font-medium flex items-center gap-1.5">
-              <Filter className="h-3 w-3" />
-              Filter by Course
-            </span>
+          <div className="sm:w-60">
             <Select value={selectedCourseFilter} onValueChange={handleCourseFilterChange}>
               <SelectTrigger className="w-full h-10 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300">
-                <SelectValue placeholder="All Courses" />
+                <SelectValue placeholder="All Courses">
+                  {selectedCourseFilter === "all-courses"
+                    ? "All Courses"
+                    : allCourses.find((c) => String(c.id) === selectedCourseFilter)
+                    ? (() => {
+                        const c = allCourses.find((c) => String(c.id) === selectedCourseFilter)!;
+                        return `${c.code} - ${c.name}`;
+                      })()
+                    : "All Courses"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all-courses">All Courses</SelectItem>
                 {allCourses.map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>
                     {c.code} - {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="sm:w-60">
+            <Select value={selectedDeptFilter} onValueChange={handleDeptFilterChange}>
+              <SelectTrigger className="w-full h-10 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300">
+                <SelectValue placeholder="All Departments">
+                  {selectedDeptFilter === "all-departments" ? "All Departments" : selectedDeptFilter}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all-departments">All Departments</SelectItem>
+                {departments.map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {d}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -500,7 +570,7 @@ export function StudentsTable({
               className="h-10 px-5 text-sm font-semibold flex items-center gap-1.5 shadow-sm bg-zinc-950 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
             >
               {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              <span>Search</span>
+              <span>Search Students</span>
             </Button>
             <Button
               variant="outline"

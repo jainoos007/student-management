@@ -164,3 +164,23 @@ export function getTotalStudentsByCourse(courseId: number): number {
   return result.count;
 }
 
+export function getStudentsByDepartment(
+  department: string,
+  page: number = 1,
+  limit: number = 10
+): Student[] {
+  const offset = (page - 1) * limit;
+  const db = getDb();
+  return db
+    .prepare(`SELECT * FROM students WHERE department = ? LIMIT ? OFFSET ?`)
+    .all(department, limit, offset) as Student[];
+}
+
+export function getDepartments(): string[] {
+  const db = getDb();
+  const results = db
+    .prepare("SELECT DISTINCT department FROM students ORDER BY department ASC")
+    .all() as { department: string }[];
+  return results.map((r) => r.department);
+}
+
