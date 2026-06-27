@@ -11,7 +11,7 @@ export function getStudents(page: number = 1, limit: number = 10): Student[] {
   const offset = (page - 1) * limit;
   const db = getDb();
   return db
-    .prepare(`SELECT * FROM students LIMIT ? OFFSET ?`)
+    .prepare(`SELECT * FROM students ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`)
     .all(limit, offset) as Student[];
 }
 
@@ -234,7 +234,7 @@ export function queryStudents(options: {
     sql += ` WHERE ` + conditions.join(` AND `);
   }
 
-  sql += ` LIMIT ? OFFSET ?`;
+  sql += ` ORDER BY s.created_at DESC, s.id DESC LIMIT ? OFFSET ?`;
   params.push(limit, offset);
 
   return db.prepare(sql).all(...params) as Student[];

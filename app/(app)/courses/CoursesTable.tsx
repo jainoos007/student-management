@@ -16,7 +16,9 @@ import {
   ChevronRight,
   ArrowUpDown,
   BookOpen,
-  AlertCircle
+  AlertCircle,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -340,8 +342,15 @@ export function CoursesTable({
                   >
                     <div className="flex items-center gap-1">
                       <span>Name</span>
-                      <ArrowUpDown className="h-3 w-3 opacity-60" />
-                      {sortColumn === "name" && (sortDirection === "asc" ? "↑" : "↓")}
+                      {sortColumn === "name" ? (
+                        sortDirection === "asc" ? (
+                          <ArrowUp className="h-3 w-3 ml-0.5 text-zinc-900 dark:text-white" />
+                        ) : (
+                          <ArrowDown className="h-3 w-3 ml-0.5 text-zinc-900 dark:text-white" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="h-3 w-3 ml-0.5 opacity-40" />
+                      )}
                     </div>
                   </TableHead>
                   <TableHead
@@ -350,8 +359,15 @@ export function CoursesTable({
                   >
                     <div className="flex items-center gap-1">
                       <span>Code</span>
-                      <ArrowUpDown className="h-3 w-3 opacity-60" />
-                      {sortColumn === "code" && (sortDirection === "asc" ? "↑" : "↓")}
+                      {sortColumn === "code" ? (
+                        sortDirection === "asc" ? (
+                          <ArrowUp className="h-3 w-3 ml-0.5 text-zinc-900 dark:text-white" />
+                        ) : (
+                          <ArrowDown className="h-3 w-3 ml-0.5 text-zinc-900 dark:text-white" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="h-3 w-3 ml-0.5 opacity-40" />
+                      )}
                     </div>
                   </TableHead>
                   <TableHead
@@ -360,8 +376,15 @@ export function CoursesTable({
                   >
                     <div className="flex items-center gap-1">
                       <span>Credits</span>
-                      <ArrowUpDown className="h-3 w-3 opacity-60" />
-                      {sortColumn === "credits" && (sortDirection === "asc" ? "↑" : "↓")}
+                      {sortColumn === "credits" ? (
+                        sortDirection === "asc" ? (
+                          <ArrowUp className="h-3 w-3 ml-0.5 text-zinc-900 dark:text-white" />
+                        ) : (
+                          <ArrowDown className="h-3 w-3 ml-0.5 text-zinc-900 dark:text-white" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="h-3 w-3 ml-0.5 opacity-40" />
+                      )}
                     </div>
                   </TableHead>
                   <TableHead className="px-6 py-3.5">Created At</TableHead>

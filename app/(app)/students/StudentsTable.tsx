@@ -19,7 +19,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  AlertCircle
+  AlertCircle,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { StudentCreateForm } from "./StudentCreateForm";
@@ -368,7 +371,50 @@ export function StudentsTable({
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isSearching, setIsSearching] = useState(false);
+  const [sortColumn, setSortColumn] = useState<"name" | "email" | "age" | "created_at" | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (column: "name" | "email" | "age" | "created_at") => {
+    if (sortColumn === column) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
   const displayedStudents = searchResults ?? students;
+
+  const sortedStudents = [...displayedStudents].sort((a, b) => {
+    if (!sortColumn) {
+      const timeA = new Date(a.created_at).getTime();
+      const timeB = new Date(b.created_at).getTime();
+      if (timeB !== timeA) return timeB - timeA;
+      return b.id - a.id;
+    }
+
+    const aVal = a[sortColumn];
+    const bVal = b[sortColumn];
+
+    if (sortColumn === "age") {
+      const numA = Number(aVal);
+      const numB = Number(bVal);
+      return sortDirection === "asc" ? numA - numB : numB - numA;
+    }
+
+    if (sortColumn === "created_at") {
+      const timeA = new Date(String(aVal)).getTime();
+      const timeB = new Date(String(bVal)).getTime();
+      return sortDirection === "asc" ? timeA - timeB : timeB - timeA;
+    }
+
+    const strA = String(aVal ?? "").toLowerCase();
+    const strB = String(bVal ?? "").toLowerCase();
+    if (strA < strB) return sortDirection === "asc" ? -1 : 1;
+    if (strA > strB) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
   const isShowingSearchResults = searchResults !== null;
   const pageStart =
     totalStudents === 0 ? 0 : Math.min((currentPage - 1) * limit + 1, totalStudents);
@@ -639,24 +685,52 @@ export function StudentsTable({
             <Table className="w-full min-w-[860px]">
               <TableHeader className="bg-zinc-50/50 dark:bg-zinc-950/30">
                 <TableRow>
-                  <TableHead className="px-6 py-3.5 w-16">ID</TableHead>
                   <TableHead className="px-6 py-3.5">Name</TableHead>
                   <TableHead className="px-6 py-3.5">Email</TableHead>
-                  <TableHead className="px-6 py-3.5">Age</TableHead>
+                  <TableHead
+                    onClick={() => handleSort("age")}
+                    className="px-6 py-3.5 cursor-pointer select-none hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Age</span>
+                      {sortColumn === "age" ? (
+                        sortDirection === "asc" ? (
+                          <ArrowUp className="h-3 w-3 ml-0.5 text-zinc-900 dark:text-white" />
+                        ) : (
+                          <ArrowDown className="h-3 w-3 ml-0.5 text-zinc-900 dark:text-white" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="h-3 w-3 ml-0.5 opacity-40" />
+                      )}
+                    </div>
+                  </TableHead>
                   <TableHead className="px-6 py-3.5">Department</TableHead>
-                  <TableHead className="px-6 py-3.5">Created</TableHead>
+                  <TableHead
+                    onClick={() => handleSort("created_at")}
+                    className="px-6 py-3.5 cursor-pointer select-none hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Created</span>
+                      {sortColumn === "created_at" ? (
+                        sortDirection === "asc" ? (
+                          <ArrowUp className="h-3 w-3 ml-0.5 text-zinc-900 dark:text-white" />
+                        ) : (
+                          <ArrowDown className="h-3 w-3 ml-0.5 text-zinc-900 dark:text-white" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="h-3 w-3 ml-0.5 opacity-40" />
+                      )}
+                    </div>
+                  </TableHead>
                   <TableHead className="px-6 py-3.5 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayedStudents.map((student) => {
+                {sortedStudents.map((student) => {
                   const isEditing = editingId === student.id;
 
                   return (
                     <TableRow key={student.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10 transition-colors">
-                      <TableCell className="px-6 py-4 font-mono text-xs font-semibold text-zinc-400 dark:text-zinc-500">
-                        #{student.id}
-                      </TableCell>
                       <TableCell className="px-6 py-4">
                         {isEditing ? (
                           <Input
