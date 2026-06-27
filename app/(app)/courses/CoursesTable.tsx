@@ -19,6 +19,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 // Official Shadcn Components
 import { 
@@ -171,10 +172,13 @@ export function CoursesTable({
     });
 
     if (!response.ok) {
-      setError("Could not update course. Check the details and try again.");
+      const errorMsg = "Could not update course. Check the details and try again.";
+      setError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
+    toast.success("Course details updated successfully");
     setEditingId(null);
     setSearchResults((current) =>
       current
@@ -203,11 +207,14 @@ export function CoursesTable({
     });
 
     if (!response.ok) {
-      setError("Could not delete course. Try again.");
+      const errorMsg = "Could not delete course. Try again.";
+      setError(errorMsg);
+      toast.error(errorMsg);
       setDeletingId(null);
       return;
     }
 
+    toast.success(`Course "${name}" deleted successfully`);
     if (editingId === id) {
       setEditingId(null);
     }

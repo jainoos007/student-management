@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { StudentCreateForm } from "./StudentCreateForm";
+import { toast } from "sonner";
 
 // Official Shadcn Components
 import { 
@@ -92,6 +93,9 @@ export function StudentsTable({
 
   const [searchQuery, setSearchQuery] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<{ id: number; name: string } | null>(null);
 
   useEffect(() => {
     async function loadAllCourses() {
@@ -314,12 +318,15 @@ export function StudentsTable({
         throw new Error("Failed to enroll student.");
       }
 
+      toast.success("Enrolled in course successfully");
       await openEnrollmentModal(activeStudent);
       startTransition(() => {
         router.refresh();
       });
     } catch (err: any) {
-      setModalError(err.message || "Could not enroll student.");
+      const errorMsg = err.message || "Could not enroll student.";
+      setModalError(errorMsg);
+      toast.error(errorMsg);
     }
   }
 
@@ -339,12 +346,15 @@ export function StudentsTable({
         throw new Error("Failed to unenroll student.");
       }
 
+      toast.success("Unenrolled from course successfully");
       await openEnrollmentModal(activeStudent);
       startTransition(() => {
         router.refresh();
       });
     } catch (err: any) {
-      setModalError(err.message || "Could not unenroll student.");
+      const errorMsg = err.message || "Could not unenroll student.";
+      setModalError(errorMsg);
+      toast.error(errorMsg);
     }
   }
 
@@ -396,10 +406,13 @@ export function StudentsTable({
     });
 
     if (!response.ok) {
-      setError("Could not update student. Check the details and try again.");
+      const errorMsg = "Could not update student. Check the details and try again.";
+      setError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
+    toast.success("Student details updated successfully");
     setEditingId(null);
     setSearchResults((current) =>
       current
@@ -413,37 +426,51 @@ export function StudentsTable({
     });
   }
 
-  async function deleteStudent(id: number, name: string) {
-    const shouldDelete = window.confirm(`Delete ${name}?`);
+  function deleteStudent(id: number, name: string) {
+    setStudentToDelete({ id, name });
+    setDeleteConfirmOpen(true);
+  }
 
-    if (!shouldDelete) {
-      return;
-    }
+  async function handleConfirmDelete() {
+    if (!studentToDelete) return;
+    const { id } = studentToDelete;
 
     setError(null);
     setDeletingId(id);
+    setDeleteConfirmOpen(false);
 
-    const response = await fetch(`/api/students/${id}`, {
-      method: "DELETE",
-    });
+    try {
+      const response = await fetch(`/api/students/${id}`, {
+        method: "DELETE",
+      });
 
-    if (!response.ok) {
+      if (!response.ok) {
+        const errorMsg = "Could not delete student. Try again.";
+        setError(errorMsg);
+        toast.error(errorMsg);
+        setDeletingId(null);
+        setStudentToDelete(null);
+        return;
+      }
+
+      toast.success(`Student "${studentToDelete?.name || ""}" deleted successfully`);
+      if (editingId === id) {
+        setEditingId(null);
+      }
+
+      setSearchResults((current) =>
+        current ? current.filter((student) => student.id !== id) : current,
+      );
+      setDeletingId(null);
+      setStudentToDelete(null);
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (err) {
       setError("Could not delete student. Try again.");
       setDeletingId(null);
-      return;
+      setStudentToDelete(null);
     }
-
-    if (editingId === id) {
-      setEditingId(null);
-    }
-
-    setSearchResults((current) =>
-      current ? current.filter((student) => student.id !== id) : current,
-    );
-    setDeletingId(null);
-    startTransition(() => {
-      router.refresh();
-    });
   }
 
   function clearSearch() {
@@ -489,7 +516,7 @@ export function StudentsTable({
                     : "All Courses"}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent alignItemWithTrigger={false} side="bottom" align="start" className="min-w-[--anchor-width]! w-max!">
                 <SelectItem value="all-courses">All Courses</SelectItem>
                 {allCourses.map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>
@@ -507,7 +534,7 @@ export function StudentsTable({
                   {selectedDeptFilter === "all-departments" ? "All Departments" : selectedDeptFilter}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent alignItemWithTrigger={false} side="bottom" align="start" className="min-w-[--anchor-width]! w-max!">
                 <SelectItem value="all-departments">All Departments</SelectItem>
                 {departments.map((d) => (
                   <SelectItem key={d} value={d}>
@@ -519,14 +546,6 @@ export function StudentsTable({
           </div>
 
           <div className="flex gap-2 shrink-0">
-            <Button
-              variant="outline"
-              className="h-10 px-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 border-zinc-205"
-              type="button"
-              onClick={clearSearch}
-            >
-              Clear
-            </Button>
             <Button
               variant="outline"
               className="h-10 px-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 border-zinc-205 flex items-center gap-1.5"
@@ -548,45 +567,53 @@ export function StudentsTable({
 
       {/* Filter Chips Display Area */}
       {hasActiveFilters && (
-        <div className="flex flex-wrap items-center gap-2 -mt-4 px-1">
-          <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Active filters:</span>
-          {selectedCourseFilter !== "all-courses" && (
-            <div className="inline-flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-400 text-xs px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/40">
-              <span className="font-semibold">Course:</span>
-              <span>
-                {allCourses.find((c) => String(c.id) === selectedCourseFilter)?.code || selectedCourseFilter}
-              </span>
-              <button
-                type="button"
-                onClick={() => setSelectedCourseFilter("all-courses")}
-                className="hover:bg-indigo-100 dark:hover:bg-indigo-950/60 p-0.5 rounded-full text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 ml-1 transition-colors"
-                aria-label="Remove Course Filter"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          )}
-          {selectedDeptFilter !== "all-departments" && (
-            <div className="inline-flex items-center gap-1.5 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 text-xs px-3 py-1 rounded-full border border-purple-100 dark:border-purple-900/40">
-              <span className="font-semibold">Department:</span>
-              <span>{selectedDeptFilter}</span>
-              <button
-                type="button"
-                onClick={() => setSelectedDeptFilter("all-departments")}
-                className="hover:bg-purple-100 dark:hover:bg-purple-950/60 p-0.5 rounded-full text-purple-500 hover:text-purple-700 dark:hover:text-purple-300 ml-1 transition-colors"
-                aria-label="Remove Department Filter"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={clearSearch}
-            className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-semibold underline transition-colors ml-1"
-          >
-            Reset Filters
-          </button>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 -mt-4 px-1.5">
+          {/* Chips on the left */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Active filters:</span>
+            {selectedCourseFilter !== "all-courses" && (
+              <div className="inline-flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-400 text-xs px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/40">
+                <span className="font-semibold">Course:</span>
+                <span>
+                  {allCourses.find((c) => String(c.id) === selectedCourseFilter)?.code || selectedCourseFilter}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCourseFilter("all-courses")}
+                  className="hover:bg-indigo-100 dark:hover:bg-indigo-950/60 p-0.5 rounded-full text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 ml-1 transition-colors"
+                  aria-label="Remove Course Filter"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+            {selectedDeptFilter !== "all-departments" && (
+              <div className="inline-flex items-center gap-1.5 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 text-xs px-3 py-1 rounded-full border border-purple-100 dark:border-purple-900/40">
+                <span className="font-semibold">Department:</span>
+                <span>{selectedDeptFilter}</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDeptFilter("all-departments")}
+                  className="hover:bg-purple-100 dark:hover:bg-purple-950/60 p-0.5 rounded-full text-purple-500 hover:text-purple-700 dark:hover:text-purple-300 ml-1 transition-colors"
+                  aria-label="Remove Department Filter"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-semibold underline transition-colors ml-1"
+            >
+              Reset Filters
+            </button>
+          </div>
+
+          {/* Counts on the right corner */}
+          <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 select-none">
+            Found {displayedStudents.length} {displayedStudents.length === 1 ? "record" : "records"}
+          </div>
         </div>
       )}
 
@@ -955,6 +982,42 @@ export function StudentsTable({
             </DialogFooter>
           </DialogContent>
         )}
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-xl rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-950 dark:text-white font-bold flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <span>Delete Student Record</span>
+            </DialogTitle>
+            <DialogDescription className="text-zinc-550 dark:text-zinc-400 mt-2 text-sm">
+              Are you sure you want to permanently delete the record for{" "}
+              <strong className="text-zinc-850 dark:text-zinc-200">{studentToDelete?.name}</strong>? 
+              This action cannot be undone and will remove all their course enrollment records.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="mt-6 flex flex-row items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteConfirmOpen(false);
+                setStudentToDelete(null);
+              }}
+              className="h-9 px-4 text-xs font-semibold text-zinc-650 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-850 shadow-sm"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmDelete}
+              className="h-9 px-4 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 border border-red-700 dark:border-red-600 shadow-sm"
+            >
+              Delete Record
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </div>
   );

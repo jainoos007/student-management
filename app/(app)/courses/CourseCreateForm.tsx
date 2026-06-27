@@ -7,6 +7,7 @@ import { Plus, BookOpen, AlertCircle, Loader2, ChevronDown, ChevronUp } from "lu
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
 
 type CreateCourseFormState = {
   name: string;
@@ -36,18 +37,24 @@ export function CourseCreateForm() {
     const creditsNum = Number(form.credits);
 
     if (!nameClean) {
-      setError("Course Name cannot be empty.");
+      const errorMsg = "Course Name cannot be empty.";
+      setError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
     const codeRegex = /^[A-Z]{2,4}\d{3,4}$/;
     if (!codeRegex.test(codeClean)) {
-      setError("Course Code must consist of 2 to 4 letters followed by 3 to 4 digits (e.g., CS101, MATH101).");
+      const errorMsg = "Course Code must consist of 2 to 4 letters followed by 3 to 4 digits (e.g., CS101, MATH101).";
+      setError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
     if (isNaN(creditsNum) || creditsNum < 1 || creditsNum > 10) {
-      setError("Credits must be a number between 1 and 10.");
+      const errorMsg = "Credits must be a number between 1 and 10.";
+      setError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
@@ -64,12 +71,16 @@ export function CourseCreateForm() {
     });
 
     if (!response.ok) {
-      setError("Could not add course. Check the details and try again (make sure Code is unique).");
+      const errorMsg = "Could not add course. Check the details and try again (make sure Code is unique).";
+      setError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
+    const addedName = nameClean;
     setForm(emptyForm);
     setIsExpanded(false);
+    toast.success(`Course "${addedName}" added successfully`);
     startTransition(() => {
       router.refresh();
     });

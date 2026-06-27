@@ -57,6 +57,6 @@ export async function DELETE(
     {
       message: "Student deleted successfully",
     },
-    { status: 204 },
+    { status: 200 },
   );
 }

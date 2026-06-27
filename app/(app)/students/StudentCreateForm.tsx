@@ -12,8 +12,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 type CreateFormState = {
   name: string;
@@ -53,13 +53,17 @@ export function StudentCreateForm() {
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
-      setError(data.message || "Could not add student. Check the details and try again.");
+      const errorMsg = data.message || "Could not add student. Check the details and try again.";
+      setError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
+    const registeredName = form.name;
     setForm(emptyForm);
     setError(null);
     setOpen(false);
+    toast.success(`Student "${registeredName}" registered successfully`);
     startTransition(() => {
       router.refresh();
     });
