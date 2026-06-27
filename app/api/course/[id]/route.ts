@@ -20,7 +20,7 @@ export async function PUT(
   if (body.credits <= 0) {
     return NextResponse.json(
       {
-        message: "Credits must be possitive number",
+        message: "Credits must be positive number",
       },
       {
         status: 400,

@@ -1,6 +1,6 @@
 import {
   createEnrollment,
-  deleteEnrollement,
+  deleteEnrollment,
   updateEnrollment,
 } from "@/lib/enrollment";
 import { NextResponse } from "next/server";

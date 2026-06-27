@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
 import type { Student } from "@/types/student";
+import type { Course } from "@/types/course";
 
 type EditableStudent = Pick<
   Student,
@@ -29,6 +30,97 @@ export function StudentsTable({
 }: StudentsTableProps) {
   const router = useRouter();
   const [searchResults, setSearchResults] = useState<Student[] | null>(null);
+  
+  const [activeStudent, setActiveStudent] = useState<Student | null>(null);
+  const [studentCourses, setStudentCourses] = useState<(Course & { enrollment_id: number })[]>([]);
+  const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+
+  async function openEnrollmentModal(student: Student) {
+    setActiveStudent(student);
+    setModalLoading(true);
+    setModalError(null);
+    setSelectedCourseId("");
+    setStudentCourses([]);
+    setAvailableCourses([]);
+
+    try {
+      const coursesRes = await fetch(`/api/students/${student.id}/courses`);
+      if (!coursesRes.ok) throw new Error("Failed to fetch student courses");
+      const coursesData = await coursesRes.json();
+      const currentCourses = coursesData.success ? coursesData.data : [];
+      setStudentCourses(currentCourses);
+
+      const allCoursesRes = await fetch("/api/course?limit=100");
+      if (!allCoursesRes.ok) throw new Error("Failed to fetch all courses");
+      const allCourses = await allCoursesRes.json() as Course[];
+
+      const currentCourseIds = new Set(currentCourses.map((c: any) => c.id));
+      const unenrolled = allCourses.filter((course) => !currentCourseIds.has(course.id));
+      setAvailableCourses(unenrolled);
+    } catch (err: any) {
+      setModalError(err.message || "An error occurred while loading courses.");
+    } finally {
+      setModalLoading(false);
+    }
+  }
+
+  async function enrollInCourse(e: FormEvent) {
+    e.preventDefault();
+    if (!selectedCourseId || !activeStudent) return;
+    setModalError(null);
+
+    try {
+      const response = await fetch("/api/enrollment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          student_id: activeStudent.id,
+          course_id: Number(selectedCourseId),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to enroll student.");
+      }
+
+      await openEnrollmentModal(activeStudent);
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (err: any) {
+      setModalError(err.message || "Could not enroll student.");
+    }
+  }
+
+  async function unenrollFromCourse(enrollmentId: number) {
+    if (!activeStudent) return;
+    const shouldDelete = window.confirm("Are you sure you want to unenroll the student from this course?");
+    if (!shouldDelete) return;
+
+    setModalError(null);
+
+    try {
+      const response = await fetch(`/api/enrollment/${enrollmentId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to unenroll student.");
+      }
+
+      await openEnrollmentModal(activeStudent);
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (err: any) {
+      setModalError(err.message || "Could not unenroll student.");
+    }
+  }
   const [searchQuery, setSearchQuery] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>({
@@ -332,6 +424,14 @@ export function StudentsTable({
                               Edit
                             </button>
                             <button
+                              className="h-9 rounded-md border border-zinc-300 px-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:text-zinc-400"
+                              disabled={deletingId === student.id}
+                              type="button"
+                              onClick={() => openEnrollmentModal(student)}
+                            >
+                              Courses
+                            </button>
+                            <button
                               className="h-9 rounded-md border border-red-200 px-3 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:text-red-300"
                               disabled={deletingId === student.id}
                               type="button"
@@ -394,6 +494,93 @@ export function StudentsTable({
         <div className="border-t border-zinc-200 px-5 py-4 text-sm text-zinc-600">
           Showing {displayedStudents.length} search result
           {displayedStudents.length === 1 ? "" : "s"}
+        </div>
+      )}
+
+      {activeStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="relative w-full max-w-lg rounded-lg border border-zinc-200 bg-white p-6 shadow-xl text-zinc-950">
+            <button
+              onClick={() => setActiveStudent(null)}
+              className="absolute right-4 top-4 text-zinc-400 hover:text-zinc-600"
+            >
+              ✕
+            </button>
+            <h2 className="text-xl font-semibold">Course Enrollment</h2>
+            <p className="text-sm text-zinc-500 mt-1">
+              Manage enrolled courses for <strong className="text-zinc-900">{activeStudent.name}</strong> ({activeStudent.email})
+            </p>
+
+            {modalError && (
+              <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {modalError}
+              </div>
+            )}
+
+            <div className="mt-6">
+              <h3 className="text-sm font-semibold text-zinc-700">Enrolled Courses ({studentCourses.length})</h3>
+              {modalLoading ? (
+                <p className="text-sm text-zinc-500 mt-2">Loading courses...</p>
+              ) : studentCourses.length === 0 ? (
+                <p className="text-sm text-zinc-500 mt-2 italic">Not enrolled in any courses yet.</p>
+              ) : (
+                <ul className="mt-2 divide-y divide-zinc-100 max-h-48 overflow-y-auto border border-zinc-200 rounded-md">
+                  {studentCourses.map((course) => (
+                    <li key={course.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                      <div>
+                        <span className="font-medium text-zinc-900">{course.name}</span>
+                        <span className="ml-2 font-mono bg-zinc-100 text-zinc-700 text-xs px-1.5 py-0.5 rounded">{course.code}</span>
+                        <span className="ml-2 text-xs text-zinc-500">{course.credits} cr</span>
+                      </div>
+                      <button
+                        onClick={() => unenrollFromCourse(course.enrollment_id)}
+                        className="text-xs font-semibold text-red-600 hover:text-red-800 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {!modalLoading && (
+              <form onSubmit={enrollInCourse} className="mt-6 pt-4 border-t border-zinc-200">
+                <h3 className="text-sm font-semibold text-zinc-700">Enroll in a new course</h3>
+                <div className="mt-2 flex gap-2">
+                  <select
+                    value={selectedCourseId}
+                    onChange={(e) => setSelectedCourseId(e.target.value)}
+                    required
+                    className="h-10 flex-1 rounded-md border border-zinc-300 bg-white px-3 text-sm outline-none focus:border-zinc-500"
+                  >
+                    <option value="">Select a course to enroll...</option>
+                    {availableCourses.map((course) => (
+                      <option key={course.id} value={course.id}>
+                        {course.code} - {course.name} ({course.credits} Credits)
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="submit"
+                    disabled={!selectedCourseId}
+                    className="h-10 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+                  >
+                    Enroll
+                  </button>
+                </div>
+              </form>
+            )}
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setActiveStudent(null)}
+                className="h-10 rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

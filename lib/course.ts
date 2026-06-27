@@ -31,7 +31,7 @@ export function updateCourse(course: CourseUpdate) {
   return db
     .prepare(
       `
-        UPDATE course SET name = ? , code = ? , credits = ? WHER id = ?
+        UPDATE courses SET name = ? , code = ? , credits = ? WHERE id = ?
         `,
     )
     .run(course.name, course.code, course.credits, course.id);
@@ -47,12 +47,12 @@ export function getStudentCourses(studentId: number) {
   return db
     .prepare(
       `
-     SELECT C.* FROM cources c
-     JOIN enrollements e ON c.id = e.course_id
+     SELECT c.*, e.id as enrollment_id FROM courses c
+     JOIN enrollments e ON c.id = e.course_id
      WHERE e.student_id = ?   
     `,
     )
-    .all(studentId);
+    .all(studentId) as (Course & { enrollment_id: number })[];
 }
 
 export function searchCourses(query: string): Course[] {
@@ -66,3 +66,20 @@ export function searchCourses(query: string): Course[] {
     )
     .all(`%${query}%`, `%${query}%`, `%${query}%`) as Course[];
 }
+
+export function getTotalCourses(): number {
+  const db = getDb();
+  const result = db.prepare("SELECT COUNT(*) as count FROM courses").get() as {
+    count: number;
+  };
+  return result.count;
+}
+
+export function getAverageEnrollmentsPerStudent(): number {
+  const db = getDb();
+  const totalStudents = (db.prepare("SELECT COUNT(*) as count FROM students").get() as { count: number }).count;
+  if (totalStudents === 0) return 0;
+  const totalEnrollments = (db.prepare("SELECT COUNT(*) as count FROM enrollments").get() as { count: number }).count;
+  return totalEnrollments / totalStudents;
+}
+

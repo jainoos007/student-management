@@ -11,7 +11,7 @@ export function createEnrollment(
   return db
     .prepare(
       `
-        INSERT INTO enrollments(student_id, course_id, enrollmentment_date) VALUES(?, ?, ?)
+        INSERT INTO enrollments(student_id, course_id, enrollment_date) VALUES(?, ?, ?)
     `,
     )
     .run(enrollment.student_id, enrollment.course_id, enrollmentDate);
@@ -23,13 +23,14 @@ export function updateEnrollment(enrollment: enrollmentUpdate) {
   return db
     .prepare(
       `
-        UPDATE enrollements SET student_id = ?, course_id = ? WHERE id = ?
+        UPDATE enrollments SET student_id = ?, course_id = ? WHERE id = ?
         `,
     )
-    .run(enrollment.student_id, enrollment.course_id);
+    .run(enrollment.student_id, enrollment.course_id, enrollment.id);
 }
 
-export function deleteEnrollement(id: number) {
+export function deleteEnrollment(id: number) {
   const db = getDb();
   return db.prepare(`DELETE FROM enrollments WHERE id = ?`).run(id);
 }
+

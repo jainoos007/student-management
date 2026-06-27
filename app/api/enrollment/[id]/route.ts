@@ -1,4 +1,4 @@
-import { deleteEnrollement, updateEnrollment } from "@/lib/enrollment";
+import { deleteEnrollment, updateEnrollment } from "@/lib/enrollment";
 import { NextResponse } from "next/server";
 
 export async function PUT(
@@ -35,7 +35,7 @@ export async function PUT(
       },
     );
   } catch {
-    NextResponse.json(
+    return NextResponse.json(
       {
         message: "Error updating enrollment",
       },
@@ -53,10 +53,10 @@ export async function DELETE(
   const { id } = await ctx.params;
 
   try {
-    deleteEnrollement(Number(id));
+    deleteEnrollment(Number(id));
     return NextResponse.json(
       {
-        message: "Enrollment delted successfully",
+        message: "Enrollment deleted successfully",
       },
       { status: 201 },
     );
@@ -69,3 +69,4 @@ export async function DELETE(
     );
   }
 }
+

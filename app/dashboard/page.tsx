@@ -6,6 +6,7 @@ import {
   getOldestStudent,
   getTotalStudents,
 } from "@/lib/student";
+import { getTotalCourses, getAverageEnrollmentsPerStudent } from "@/lib/course";
 
 export const metadata = {
   title: "Dashboard",
@@ -19,6 +20,9 @@ export default async function DashboardPage() {
   const averageAge = getAverageAge();
   const oldestStudent = getOldestStudent();
   const departmentStats = getDepartmentStats();
+  const totalCourses = getTotalCourses();
+  const averageEnrollments = getAverageEnrollmentsPerStudent();
+
   const maxDepartmentCount = Math.max(
     1,
     ...departmentStats.map((department) => department.count),
@@ -36,15 +40,23 @@ export default async function DashboardPage() {
               Dashboard
             </h1>
           </div>
-          <Link
-            href="/students"
-            className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-950 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
-          >
-            Manage students
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href="/courses"
+              className="inline-flex h-10 items-center justify-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+            >
+              Manage courses
+            </Link>
+            <Link
+              href="/students"
+              className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-950 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
+            >
+              Manage students
+            </Link>
+          </div>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div className="rounded-lg border border-zinc-200 bg-white p-5">
             <p className="text-sm text-zinc-500">Total students</p>
             <p className="mt-2 text-3xl font-semibold">{totalStudents}</p>
@@ -61,7 +73,18 @@ export default async function DashboardPage() {
               {departmentStats.length}
             </p>
           </div>
+          <div className="rounded-lg border border-zinc-200 bg-white p-5">
+            <p className="text-sm text-zinc-500">Total courses</p>
+            <p className="mt-2 text-3xl font-semibold">{totalCourses}</p>
+          </div>
+          <div className="rounded-lg border border-zinc-200 bg-white p-5">
+            <p className="text-sm text-zinc-500">Avg Enrollments</p>
+            <p className="mt-2 text-3xl font-semibold">
+              {totalStudents === 0 ? "N/A" : averageEnrollments.toFixed(1)}
+            </p>
+          </div>
         </section>
+
 
         <section className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
           <div className="rounded-lg border border-zinc-200 bg-white">

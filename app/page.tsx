@@ -46,6 +46,12 @@ export default async function Home() {
             >
               View students
             </Link>
+            <Link
+              href="/courses"
+              className="inline-flex h-11 items-center justify-center rounded-md border border-zinc-300 px-5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+            >
+              View courses
+            </Link>
           </div>
         </header>
 
