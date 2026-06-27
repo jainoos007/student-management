@@ -29,7 +29,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div>
             <h1 className="font-semibold text-lg text-zinc-900 dark:text-white leading-none">EduSuite</h1>
-            <span className="text-xs text-zinc-400 font-medium">SaaS Portal</span>
+            <span className="text-[10px] text-zinc-450 dark:text-zinc-500 font-bold uppercase tracking-wider block mt-1 select-none">Student Directory</span>
           </div>
         </div>
 

@@ -99,6 +99,10 @@ export function StudentsTable({
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<{ id: number; name: string } | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
+  const [unenrollConfirmOpen, setUnenrollConfirmOpen] = useState(false);
+  const [enrollmentToUnenroll, setEnrollmentToUnenroll] = useState<{ id: number; courseName: string } | null>(null);
 
   useEffect(() => {
     async function loadAllCourses() {
@@ -333,15 +337,19 @@ export function StudentsTable({
     }
   }
 
-  async function unenrollFromCourse(enrollmentId: number) {
-    if (!activeStudent) return;
-    const shouldDelete = window.confirm("Are you sure you want to unenroll the student from this course?");
-    if (!shouldDelete) return;
+  function requestUnenroll(enrollmentId: number, courseName: string) {
+    setEnrollmentToUnenroll({ id: enrollmentId, courseName });
+    setUnenrollConfirmOpen(true);
+  }
 
+  async function handleConfirmUnenroll() {
+    if (!enrollmentToUnenroll || !activeStudent) return;
+    const { id, courseName } = enrollmentToUnenroll;
+    setUnenrollConfirmOpen(false);
     setModalError(null);
 
     try {
-      const response = await fetch(`/api/enrollment/${enrollmentId}`, {
+      const response = await fetch(`/api/enrollment/${id}`, {
         method: "DELETE",
       });
 
@@ -349,7 +357,8 @@ export function StudentsTable({
         throw new Error("Failed to unenroll student.");
       }
 
-      toast.success("Unenrolled from course successfully");
+      toast.success(`Successfully unenrolled from "${courseName}"`);
+      setEnrollmentToUnenroll(null);
       await openEnrollmentModal(activeStudent);
       startTransition(() => {
         router.refresh();
@@ -358,6 +367,7 @@ export function StudentsTable({
       const errorMsg = err.message || "Could not unenroll student.";
       setModalError(errorMsg);
       toast.error(errorMsg);
+      setEnrollmentToUnenroll(null);
     }
   }
 
@@ -426,6 +436,7 @@ export function StudentsTable({
 
   function startEdit(student: Student) {
     setEditingId(student.id);
+    setStudentToEdit(student);
     setForm({
       name: student.name,
       email: student.email,
@@ -433,10 +444,13 @@ export function StudentsTable({
       department: student.department,
     });
     setError(null);
+    setEditDialogOpen(true);
   }
 
   function cancelEdit() {
     setEditingId(null);
+    setStudentToEdit(null);
+    setEditDialogOpen(false);
     setError(null);
   }
 
@@ -452,7 +466,8 @@ export function StudentsTable({
     });
 
     if (!response.ok) {
-      const errorMsg = "Could not update student. Check the details and try again.";
+      const data = await response.json().catch(() => ({}));
+      const errorMsg = data.message || "Could not update student. Check the details and try again.";
       setError(errorMsg);
       toast.error(errorMsg);
       return;
@@ -460,6 +475,8 @@ export function StudentsTable({
 
     toast.success("Student details updated successfully");
     setEditingId(null);
+    setStudentToEdit(null);
+    setEditDialogOpen(false);
     setSearchResults((current) =>
       current
         ? current.map((student) =>
@@ -727,156 +744,63 @@ export function StudentsTable({
               </TableHeader>
               <TableBody>
                 {sortedStudents.map((student) => {
-                  const isEditing = editingId === student.id;
-
                   return (
                     <TableRow key={student.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10 transition-colors">
                       <TableCell className="px-6 py-4">
-                        {isEditing ? (
-                          <Input
-                            className="h-9 w-full"
-                            value={form.name}
-                            onChange={(event) =>
-                              setForm((current) => ({
-                                ...current,
-                                name: event.target.value,
-                              }))
-                            }
-                          />
-                        ) : (
-                          <span className="font-semibold text-zinc-900 dark:text-zinc-100">{student.name}</span>
-                        )}
+                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">{student.name}</span>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-zinc-650 dark:text-zinc-450">
-                        {isEditing ? (
-                          <Input
-                            className="h-9 w-full"
-                            type="email"
-                            value={form.email}
-                            onChange={(event) =>
-                              setForm((current) => ({
-                                ...current,
-                                email: event.target.value,
-                              }))
-                            }
-                          />
-                        ) : (
-                          student.email
-                        )}
+                        {student.email}
                       </TableCell>
                       <TableCell className="px-6 py-4 text-zinc-650 dark:text-zinc-450 font-medium">
-                        {isEditing ? (
-                          <Input
-                            className="h-9 w-20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            min={1}
-                            type="number"
-                            value={form.age}
-                            onChange={(event) =>
-                              setForm((current) => ({
-                                ...current,
-                                age: Number(event.target.value),
-                              }))
-                            }
-                          />
-                        ) : (
-                          student.age
-                        )}
+                        {student.age}
                       </TableCell>
                       <TableCell className="px-6 py-4 text-zinc-650 dark:text-zinc-450">
-                        {isEditing ? (
-                          <Select
-                            value={form.department}
-                            onValueChange={(val) =>
-                              setForm((current) => ({
-                                ...current,
-                                department: val ?? "",
-                              }))
-                            }
-                          >
-                            <SelectTrigger className="w-full h-9 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-850 dark:text-zinc-200">
-                              <SelectValue placeholder="Select dept..." />
-                            </SelectTrigger>
-                            <SelectContent alignItemWithTrigger={false} side="bottom" align="start" className="min-w-[--anchor-width]! w-max!">
-                              {(departments.length > 0 ? departments : ["Computer Science", "Mathematics", "Physics", "Chemistry", "Biology"]).map((d) => (
-                                <SelectItem key={d} value={d}>
-                                  {d}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Badge variant="outline" className="border-zinc-200/50 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 font-semibold px-2.5 py-1">
-                            {student.department}
-                          </Badge>
-                        )}
+                        <Badge variant="outline" className="border-zinc-200/50 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 font-semibold px-2.5 py-1">
+                          {student.department}
+                        </Badge>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-xs text-zinc-400 dark:text-zinc-500 font-medium">
                         {new Date(student.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="px-6 py-4">
                         <div className="flex justify-end gap-2">
-                          {isEditing ? (
-                            <>
-                              <Button
-                                className="h-8 bg-emerald-600 hover:bg-emerald-500 text-white px-3 text-xs font-semibold transition-all flex items-center gap-1 shadow-sm"
-                                disabled={isPending}
-                                type="button"
-                                onClick={() => saveStudent(student.id)}
-                              >
-                                {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                                <span>Save</span>
-                              </Button>
-                              <Button
-                                variant="outline"
-                                className="h-8 border-zinc-200 dark:border-zinc-850 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center gap-1"
-                                disabled={isPending}
-                                type="button"
-                                onClick={cancelEdit}
-                              >
-                                <X className="h-3.5 w-3.5" />
-                                <span>Cancel</span>
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button
-                                variant="outline"
-                                className="h-8 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center gap-1"
-                                disabled={deletingId === student.id}
-                                type="button"
-                                onClick={() => startEdit(student)}
-                              >
-                                <Edit3 className="h-3.5 w-3.5 text-zinc-450" />
-                                <span>Edit</span>
-                              </Button>
-                              <Button
-                                variant="outline"
-                                className="h-8 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center gap-1"
-                                disabled={deletingId === student.id}
-                                type="button"
-                                onClick={() => openEnrollmentModal(student)}
-                              >
-                                <BookOpen className="h-3.5 w-3.5 text-zinc-450" />
-                                <span>Courses</span>
-                              </Button>
-                              <Button
-                                variant="outline"
-                                className="h-8 border-red-150 dark:border-red-950 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-750 transition-all flex items-center gap-1"
-                                disabled={deletingId === student.id}
-                                type="button"
-                                onClick={() =>
-                                  deleteStudent(student.id, student.name)
-                                }
-                              >
-                                {deletingId === student.id ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <Trash2 className="h-3.5 w-3.5 text-red-400" />
-                                )}
-                                <span>Delete</span>
-                              </Button>
-                            </>
-                          )}
+                          <Button
+                            variant="outline"
+                            className="h-8 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center gap-1"
+                            disabled={deletingId === student.id}
+                            type="button"
+                            onClick={() => startEdit(student)}
+                          >
+                            <Edit3 className="h-3.5 w-3.5 text-zinc-450" />
+                            <span>Edit</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="h-8 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center gap-1"
+                            disabled={deletingId === student.id}
+                            type="button"
+                            onClick={() => openEnrollmentModal(student)}
+                          >
+                            <BookOpen className="h-3.5 w-3.5 text-zinc-450" />
+                            <span>Courses</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="h-8 border-red-200 dark:border-red-950 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-700 transition-all flex items-center gap-1"
+                            disabled={deletingId === student.id}
+                            type="button"
+                            onClick={() =>
+                              deleteStudent(student.id, student.name)
+                            }
+                          >
+                            {deletingId === student.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                            )}
+                            <span>Delete</span>
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -966,7 +890,7 @@ export function StudentsTable({
             </DialogHeader>
 
             {modalError && (
-              <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-955/20 px-3.5 py-2.5 text-xs text-red-700 dark:text-red-400 flex items-center gap-2">
+              <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20 px-3.5 py-2.5 text-xs text-red-700 dark:text-red-400 flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>{modalError}</span>
               </div>
@@ -1008,8 +932,8 @@ export function StudentsTable({
                       </div>
                       <Button
                         variant="ghost"
-                        onClick={() => unenrollFromCourse(course.enrollment_id)}
-                        className="h-7 text-[10px] font-bold text-red-650 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 p-0 bg-transparent hover:bg-transparent"
+                        onClick={() => requestUnenroll(course.enrollment_id, course.name)}
+                        className="h-7 text-[10px] font-bold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-0 bg-transparent hover:bg-transparent"
                       >
                         Remove
                       </Button>
@@ -1032,13 +956,20 @@ export function StudentsTable({
                     <div className="flex-1">
                       <Select value={selectedCourseId} onValueChange={(val) => setSelectedCourseId(val ?? "")}>
                         <SelectTrigger className="w-full h-10 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200">
-                          <SelectValue placeholder="Select course..." />
+                          <SelectValue placeholder="Select course...">
+                            {selectedCourseId && availableCourses.find((c) => String(c.id) === selectedCourseId)
+                              ? (() => {
+                                  const c = availableCourses.find((c) => String(c.id) === selectedCourseId)!;
+                                  return `${c.code} - ${c.name} (${c.credits} Credits)`;
+                                })()
+                              : "Select course..."}
+                          </SelectValue>
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent alignItemWithTrigger={false} side="bottom" align="start" className="min-w-[--anchor-width]! w-max!">
                           {availableCourses.map((course) => (
-                            <SelectItem key={course.id} value={String(course.id)}>
-                              {course.code} - {course.name} ({course.credits} Credits)
-                            </SelectItem>
+                             <SelectItem key={course.id} value={String(course.id)}>
+                               {course.code} - {course.name} ({course.credits} Credits)
+                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -1054,20 +985,143 @@ export function StudentsTable({
                 )}
               </form>
             )}
-
-            <DialogFooter className="mt-4">
-              <Button
-                variant="outline"
-                onClick={() => setActiveStudent(null)}
-                className="h-9 px-4 text-xs font-semibold text-zinc-650 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-850 shadow-sm"
-              >
-                Close
-              </Button>
-            </DialogFooter>
           </DialogContent>
         )}
       </Dialog>
 
+      {/* Edit Student Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={(val) => {
+        setEditDialogOpen(val);
+        if (!val) {
+          setEditingId(null);
+          setStudentToEdit(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-xl rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-950 dark:text-white font-bold flex items-center gap-2">
+              <Edit3 className="h-5 w-5 text-zinc-800 dark:text-zinc-200" />
+              <span>Edit Student Record</span>
+            </DialogTitle>
+            <DialogDescription className="text-zinc-550 dark:text-zinc-400 mt-2 text-sm">
+              Update the student details below to modify the record in the directory.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={(e) => { e.preventDefault(); if (editingId) saveStudent(editingId); }} className="space-y-4 py-2">
+            {error && (
+              <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/25 px-4 py-3 text-xs text-red-700 dark:text-red-400 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div className="space-y-3.5">
+              <div className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                <span className="text-zinc-600 dark:text-zinc-450">Full Name</span>
+                <Input
+                  required
+                  placeholder="John Doe"
+                  value={form.name}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              
+              <div className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                <span className="text-zinc-600 dark:text-zinc-455">Email Address</span>
+                <Input
+                  required
+                  type="email"
+                  placeholder="john.doe@example.com"
+                  value={form.email}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      email: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                  <span className="text-zinc-600 dark:text-zinc-450">Age</span>
+                  <Input
+                    min={16}
+                    max={100}
+                    required
+                    type="number"
+                    placeholder="20"
+                    value={form.age || ""}
+                    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        age: event.target.value ? Number(event.target.value) : 0,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                  <span className="text-zinc-600 dark:text-zinc-450">Department</span>
+                  <Select
+                    value={form.department}
+                    onValueChange={(val) =>
+                      setForm((current) => ({
+                        ...current,
+                        department: val ?? "",
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full h-10 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-850 dark:text-zinc-200">
+                      <SelectValue placeholder="Select department..." />
+                    </SelectTrigger>
+                    <SelectContent alignItemWithTrigger={false} side="bottom" align="start" className="min-w-[--anchor-width]! w-max!">
+                      {(departments.length > 0 ? departments : ["Computer Science", "Mathematics", "Physics", "Chemistry", "Biology"]).map((d) => (
+                        <SelectItem key={d} value={d}>
+                          {d}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="pt-4 flex items-center justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={cancelEdit}
+                className="h-10 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+              >
+                Cancel
+              </Button>
+              
+              <Button
+                disabled={isPending}
+                type="submit"
+                className="h-10 px-5 text-sm font-semibold shadow-sm flex items-center justify-center gap-1.5 bg-zinc-950 text-white hover:bg-zinc-900 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <span>Save Changes</span>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent className="sm:max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-xl rounded-xl">
@@ -1099,6 +1153,42 @@ export function StudentsTable({
               className="h-9 px-4 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 border border-red-700 dark:border-red-600 shadow-sm"
             >
               Delete Record
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unenroll Confirmation Dialog */}
+      <Dialog open={unenrollConfirmOpen} onOpenChange={setUnenrollConfirmOpen}>
+        <DialogContent className="sm:max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-xl rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-950 dark:text-white font-bold flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <span>Unenroll Student from Course</span>
+            </DialogTitle>
+            <DialogDescription className="text-zinc-550 dark:text-zinc-400 mt-2 text-sm">
+              Are you sure you want to unenroll the student from the course{" "}
+              <strong className="text-zinc-850 dark:text-zinc-200">{enrollmentToUnenroll?.courseName}</strong>? 
+              This will remove this course from their current enrollment records.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="mt-6 flex flex-row items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setUnenrollConfirmOpen(false);
+                setEnrollmentToUnenroll(null);
+              }}
+              className="h-9 px-4 text-xs font-semibold text-zinc-650 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-850 shadow-sm"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmUnenroll}
+              className="h-9 px-4 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 border border-red-700 dark:border-red-600 shadow-sm"
+            >
+              Unenroll Record
             </Button>
           </DialogFooter>
         </DialogContent>

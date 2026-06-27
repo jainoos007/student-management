@@ -316,7 +316,7 @@ export function CoursesTable({
       {/* Directory Table Body */}
       <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 overflow-hidden shadow-sm transition-colors duration-350">
         {error && (
-          <div className="border-b border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-955/25 px-5 py-4 text-xs text-red-700 dark:text-red-400 flex items-center gap-2">
+          <div className="border-b border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/25 px-5 py-4 text-xs text-red-700 dark:text-red-400 flex items-center gap-2">
             <AlertCircle className="h-4 w-4" />
             <span>{error}</span>
           </div>
@@ -493,7 +493,7 @@ export function CoursesTable({
                               </Button>
                               <Button
                                 variant="outline"
-                                className="h-8 border-red-150 dark:border-red-955 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-750 transition-all flex items-center gap-1"
+                                className="h-8 border-red-200 dark:border-red-950 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-700 transition-all flex items-center gap-1"
                                 disabled={deletingId === course.id}
                                 type="button"
                                 onClick={() =>

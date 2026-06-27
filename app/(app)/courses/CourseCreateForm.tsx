@@ -120,7 +120,7 @@ export function CourseCreateForm() {
             <CardContent className="border-t border-zinc-100 dark:border-zinc-800/60 p-6 bg-zinc-50/30 dark:bg-zinc-950/20">
               <form onSubmit={createCourse}>
                 {error && (
-                  <div className="mb-4 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-955/25 px-4 py-3 text-xs text-red-700 dark:text-red-400 flex items-center gap-2">
+                  <div className="mb-4 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/25 px-4 py-3 text-xs text-red-700 dark:text-red-400 flex items-center gap-2">
                     <AlertCircle className="h-4 w-4 shrink-0" />
                     <span>{error}</span>
                   </div>
