@@ -36,7 +36,7 @@ export function addStudent(student: Omit<Student, "id" | "created_at">) {
       "CREATE_STUDENT",
       "STUDENT",
       Number(result.lastInsertRowid),
-      `Registered student ${student.name} (${student.email}) in ${student.department} department.`
+      `Registered student ${student.name} (${student.email}) in ${student.department} department.`,
     );
   }
   return result;
@@ -64,7 +64,7 @@ export function updateStudent(student: StudentUpdate) {
       "UPDATE_STUDENT",
       "STUDENT",
       student.id,
-      `Updated details for student ${student.name} (age ${student.age}, dept ${student.department}).`
+      `Updated details for student ${student.name} (age ${student.age}, dept ${student.department}).`,
     );
   }
   return result;
@@ -72,7 +72,9 @@ export function updateStudent(student: StudentUpdate) {
 
 export function deleteStudent(id: number) {
   const db = getDb();
-  const student = db.prepare("SELECT * FROM students WHERE id = ?").get(id) as Student | undefined;
+  const student = db.prepare("SELECT * FROM students WHERE id = ?").get(id) as
+    | Student
+    | undefined;
   const result = db.prepare("DELETE FROM students WHERE id = ?").run(id);
 
   if (result.changes > 0 && student) {
@@ -80,7 +82,7 @@ export function deleteStudent(id: number) {
       "DELETE_STUDENT",
       "STUDENT",
       id,
-      `Deleted student record for ${student.name} (${student.email}).`
+      `Deleted student record for ${student.name} (${student.email}).`,
     );
   }
   return result;
@@ -141,33 +143,43 @@ export function getDepartmentStats(): { department: string; count: number }[] {
   return result;
 }
 
-export function getStudentsByCourse(courseId: number, page: number = 1, limit: number = 10): Student[] {
+export function getStudentsByCourse(
+  courseId: number,
+  page: number = 1,
+  limit: number = 10,
+): Student[] {
   const offset = (page - 1) * limit;
   const db = getDb();
   return db
-    .prepare(`
+    .prepare(
+      `
       SELECT s.* FROM students s
       JOIN enrollments e ON s.id = e.student_id
       WHERE e.course_id = ?
       LIMIT ? OFFSET ?
-    `)
+    `,
+    )
     .all(courseId, limit, offset) as Student[];
 }
 
 export function getTotalStudentsByCourse(courseId: number): number {
   const db = getDb();
-  const result = db.prepare(`
+  const result = db
+    .prepare(
+      `
     SELECT COUNT(*) as count FROM students s
     JOIN enrollments e ON s.id = e.student_id
     WHERE e.course_id = ?
-  `).get(courseId) as { count: number };
+  `,
+    )
+    .get(courseId) as { count: number };
   return result.count;
 }
 
 export function getStudentsByDepartment(
   department: string,
   page: number = 1,
-  limit: number = 10
+  limit: number = 10,
 ): Student[] {
   const offset = (page - 1) * limit;
   const db = getDb();
@@ -196,7 +208,7 @@ export function queryStudents(options: {
   const offset = (page - 1) * limit;
 
   const db = getDb();
-  
+
   let sql = `SELECT DISTINCT s.* FROM students s`;
   const params: any[] = [];
   const conditions: string[] = [];
@@ -227,4 +239,3 @@ export function queryStudents(options: {
 
   return db.prepare(sql).all(...params) as Student[];
 }
-

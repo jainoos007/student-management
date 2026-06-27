@@ -693,7 +693,7 @@ export function StudentsTable({
                       <TableCell className="px-6 py-4 text-zinc-650 dark:text-zinc-450 font-medium">
                         {isEditing ? (
                           <Input
-                            className="h-9 w-20"
+                            className="h-9 w-20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             min={1}
                             type="number"
                             value={form.age}
@@ -710,16 +710,26 @@ export function StudentsTable({
                       </TableCell>
                       <TableCell className="px-6 py-4 text-zinc-650 dark:text-zinc-450">
                         {isEditing ? (
-                          <Input
-                            className="h-9 w-full"
+                          <Select
                             value={form.department}
-                            onChange={(event) =>
+                            onValueChange={(val) =>
                               setForm((current) => ({
                                 ...current,
-                                department: event.target.value,
+                                department: val ?? "",
                               }))
                             }
-                          />
+                          >
+                            <SelectTrigger className="w-full h-9 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-850 dark:text-zinc-200">
+                              <SelectValue placeholder="Select dept..." />
+                            </SelectTrigger>
+                            <SelectContent alignItemWithTrigger={false} side="bottom" align="start" className="min-w-[--anchor-width]! w-max!">
+                              {(departments.length > 0 ? departments : ["Computer Science", "Mathematics", "Physics", "Chemistry", "Biology"]).map((d) => (
+                                <SelectItem key={d} value={d}>
+                                  {d}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         ) : (
                           <Badge variant="outline" className="border-zinc-200/50 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 font-semibold px-2.5 py-1">
                             {student.department}

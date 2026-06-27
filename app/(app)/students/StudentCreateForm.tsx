@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState, useTransition } from "react";
+import { FormEvent, useState, useTransition, useEffect } from "react";
 import { Plus, UserPlus, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 
 type CreateFormState = {
@@ -35,6 +42,28 @@ export function StudentCreateForm() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
+  const [departments, setDepartments] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function loadDepartments() {
+      try {
+        const res = await fetch("/api/departments");
+        if (res.ok) {
+          const data = await res.json();
+          setDepartments(data);
+        }
+      } catch (err) {
+        console.error("Failed to load departments", err);
+      }
+    }
+    if (open) {
+      loadDepartments();
+    }
+  }, [open]);
+
+  const departmentOptions = departments.length > 0
+    ? departments
+    : ["Computer Science", "Mathematics", "Physics", "Chemistry", "Biology"];
 
   async function createStudent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -143,6 +172,7 @@ export function StudentCreateForm() {
                   type="number"
                   placeholder="20"
                   value={form.age}
+                  className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   onChange={(event) =>
                     setForm((current) => ({
                       ...current,
@@ -154,17 +184,26 @@ export function StudentCreateForm() {
 
               <div className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                 <span className="text-zinc-600 dark:text-zinc-450">Department</span>
-                <Input
-                  required
-                  placeholder="Computer Science"
+                <Select
                   value={form.department}
-                  onChange={(event) =>
+                  onValueChange={(val) =>
                     setForm((current) => ({
                       ...current,
-                      department: event.target.value,
+                      department: val ?? "",
                     }))
                   }
-                />
+                >
+                  <SelectTrigger className="w-full h-10 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-850 dark:text-zinc-200">
+                    <SelectValue placeholder="Select department..." />
+                  </SelectTrigger>
+                  <SelectContent alignItemWithTrigger={false} side="bottom" align="start" className="min-w-[--anchor-width]! w-max!">
+                    {departmentOptions.map((d) => (
+                      <SelectItem key={d} value={d}>
+                        {d}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
