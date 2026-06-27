@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState, useTransition } from "react";
+import { FormEvent, useState, useTransition, useEffect } from "react";
 import type { Student } from "@/types/student";
 import type { Course } from "@/types/course";
 
@@ -38,6 +38,24 @@ export function StudentsTable({
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
+  const [allCourses, setAllCourses] = useState<Course[]>([]);
+  const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>("");
+
+  useEffect(() => {
+    async function loadAllCourses() {
+      try {
+        const res = await fetch("/api/course?limit=100");
+        if (res.ok) {
+          const data = await res.json();
+          setAllCourses(data);
+        }
+      } catch (err) {
+        console.error("Failed to load courses for filter", err);
+      }
+    }
+    loadAllCourses();
+  }, []);
+
   async function openEnrollmentModal(student: Student) {
     setActiveStudent(student);
     setModalLoading(true);
@@ -60,11 +78,143 @@ export function StudentsTable({
       const currentCourseIds = new Set(currentCourses.map((c: any) => c.id));
       const unenrolled = allCourses.filter((course) => !currentCourseIds.has(course.id));
       setAvailableCourses(unenrolled);
+      if (unenrolled.length > 0) {
+        setSelectedCourseId(String(unenrolled[0].id));
+      }
     } catch (err: any) {
       setModalError(err.message || "An error occurred while loading courses.");
     } finally {
       setModalLoading(false);
     }
+  }
+
+  async function handleCourseFilterChange(courseId: string) {
+    setSelectedCourseFilter(courseId);
+    setSearchQuery("");
+    setError(null);
+    setEditingId(null);
+    setIsSearching(true);
+
+    if (!courseId) {
+      setSearchResults(null);
+      setIsSearching(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/students?courseId=${courseId}`);
+      if (!response.ok) {
+        throw new Error("Could not filter students. Try again.");
+      }
+      const results = (await response.json()) as Student[];
+      setSearchResults(results);
+      setIsSearching(false);
+    } catch (err: any) {
+      setError(err.message || "Could not filter students.");
+      setIsSearching(false);
+    }
+  }
+
+  function exportCSV() {
+    if (displayedStudents.length === 0) return;
+    const headers = ["ID", "Name", "Email", "Age", "Department", "Created At"];
+    const rows = displayedStudents.map((student) =>
+      [
+        student.id,
+        student.name,
+        student.email,
+        student.age,
+        student.department,
+        student.created_at,
+      ]
+        .map((value) => {
+          const str = String(value ?? "");
+          if (str.includes(",") || str.includes("\"") || str.includes("\n")) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        })
+        .join(","),
+    );
+
+    const csvContent = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `students_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  function printTranscript() {
+    if (!activeStudent) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const totalCredits = studentCourses.reduce((sum, c) => sum + c.credits, 0);
+
+    const html = `
+      <html>
+        <head>
+          <title>Academic Transcript - ${activeStudent.name}</title>
+          <style>
+            body { font-family: sans-serif; padding: 40px; color: #18181b; }
+            .header { border-bottom: 2px solid #18181b; padding-bottom: 20px; margin-bottom: 30px; }
+            .title { font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; }
+            .meta { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+            th, td { border: 1px solid #e4e4e7; padding: 12px; text-align: left; font-size: 14px; }
+            th { background-color: #f4f4f5; font-weight: bold; }
+            .summary { margin-top: 30px; font-size: 16px; font-weight: bold; border-top: 2px solid #18181b; padding-top: 15px; text-align: right; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title">Academic Transcript</div>
+            <div class="meta">
+              <div><strong>Student Name:</strong> ${activeStudent.name}</div>
+              <div><strong>Email:</strong> ${activeStudent.email}</div>
+              <div><strong>Department:</strong> ${activeStudent.department}</div>
+              <div><strong>Date Generated:</strong> ${new Date().toLocaleDateString()}</div>
+            </div>
+          </div>
+          <h3>Enrolled Courses</h3>
+          ${studentCourses.length === 0 ? `
+            <p style="font-style: italic; color: #71717a;">No course enrollments found for this student.</p>
+          ` : `
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 25%;">Course Code</th>
+                  <th style="width: 55%;">Course Name</th>
+                  <th style="width: 20%;">Credits</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${studentCourses.map(course => `
+                  <tr>
+                    <td><strong>${course.code}</strong></td>
+                    <td>${course.name}</td>
+                    <td>${course.credits}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          `}
+          <div class="summary">
+            Total Courses: ${studentCourses.length} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Total Credits: ${totalCredits}
+          </div>
+          <script>
+            window.onload = function() { window.print(); window.close(); }
+          </script>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(html);
+    printWindow.document.close();
   }
 
   async function enrollInCourse(e: FormEvent) {
@@ -247,6 +397,7 @@ export function StudentsTable({
 
   function clearSearch() {
     setSearchQuery("");
+    setSelectedCourseFilter("");
     setSearchResults(null);
     setError(null);
     setEditingId(null);
@@ -267,6 +418,23 @@ export function StudentsTable({
             onChange={(event) => setSearchQuery(event.target.value)}
           />
         </label>
+
+        <label className="flex flex-1 flex-col gap-1 text-sm font-medium text-zinc-700 sm:max-w-xs">
+          Filter by Course
+          <select
+            value={selectedCourseFilter}
+            onChange={(e) => handleCourseFilterChange(e.target.value)}
+            className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm outline-none focus:border-zinc-500"
+          >
+            <option value="">All Courses</option>
+            {allCourses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.code} - {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <div className="flex gap-2">
           <button
             className="h-10 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
@@ -281,6 +449,14 @@ export function StudentsTable({
             onClick={clearSearch}
           >
             Clear
+          </button>
+          <button
+            className="h-10 rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+            type="button"
+            onClick={exportCSV}
+            disabled={displayedStudents.length === 0}
+          >
+            Export CSV
           </button>
         </div>
       </form>
@@ -518,7 +694,17 @@ export function StudentsTable({
             )}
 
             <div className="mt-6">
-              <h3 className="text-sm font-semibold text-zinc-700">Enrolled Courses ({studentCourses.length})</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-zinc-700">Enrolled Courses ({studentCourses.length})</h3>
+                {studentCourses.length > 0 && (
+                  <button
+                    onClick={printTranscript}
+                    className="text-xs font-semibold text-zinc-900 border border-zinc-300 rounded px-2.5 py-1 transition-colors hover:bg-zinc-100"
+                  >
+                    Print Transcript
+                  </button>
+                )}
+              </div>
               {modalLoading ? (
                 <p className="text-sm text-zinc-500 mt-2">Loading courses...</p>
               ) : studentCourses.length === 0 ? (
@@ -547,28 +733,31 @@ export function StudentsTable({
             {!modalLoading && (
               <form onSubmit={enrollInCourse} className="mt-6 pt-4 border-t border-zinc-200">
                 <h3 className="text-sm font-semibold text-zinc-700">Enroll in a new course</h3>
-                <div className="mt-2 flex gap-2">
-                  <select
-                    value={selectedCourseId}
-                    onChange={(e) => setSelectedCourseId(e.target.value)}
-                    required
-                    className="h-10 flex-1 rounded-md border border-zinc-300 bg-white px-3 text-sm outline-none focus:border-zinc-500"
-                  >
-                    <option value="">Select a course to enroll...</option>
-                    {availableCourses.map((course) => (
-                      <option key={course.id} value={course.id}>
-                        {course.code} - {course.name} ({course.credits} Credits)
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="submit"
-                    disabled={!selectedCourseId}
-                    className="h-10 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
-                  >
-                    Enroll
-                  </button>
-                </div>
+                {availableCourses.length === 0 ? (
+                  <p className="text-sm text-zinc-500 mt-2 italic">Student is already enrolled in all available courses.</p>
+                ) : (
+                  <div className="mt-2 flex gap-2">
+                    <select
+                      value={selectedCourseId}
+                      onChange={(e) => setSelectedCourseId(e.target.value)}
+                      required
+                      className="h-10 flex-1 rounded-md border border-zinc-300 bg-white px-3 text-sm outline-none focus:border-zinc-500"
+                    >
+                      {availableCourses.map((course) => (
+                        <option key={course.id} value={course.id}>
+                          {course.code} - {course.name} ({course.credits} Credits)
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="submit"
+                      disabled={!selectedCourseId}
+                      className="h-10 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+                    >
+                      Enroll
+                    </button>
+                  </div>
+                )}
               </form>
             )}
 

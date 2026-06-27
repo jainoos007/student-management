@@ -6,7 +6,7 @@ import {
   getOldestStudent,
   getTotalStudents,
 } from "@/lib/student";
-import { getTotalCourses, getAverageEnrollmentsPerStudent } from "@/lib/course";
+import { getTotalCourses, getAverageEnrollmentsPerStudent, getPopularCourses } from "@/lib/course";
 
 export const metadata = {
   title: "Dashboard",
@@ -22,10 +22,16 @@ export default async function DashboardPage() {
   const departmentStats = getDepartmentStats();
   const totalCourses = getTotalCourses();
   const averageEnrollments = getAverageEnrollmentsPerStudent();
+  const popularCourses = getPopularCourses(3);
 
   const maxDepartmentCount = Math.max(
     1,
     ...departmentStats.map((department) => department.count),
+  );
+
+  const maxEnrollmentCount = Math.max(
+    1,
+    ...popularCourses.map((course) => course.enrollment_count),
   );
 
   return (
@@ -86,41 +92,81 @@ export default async function DashboardPage() {
         </section>
 
 
-        <section className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
-          <div className="rounded-lg border border-zinc-200 bg-white">
-            <div className="border-b border-zinc-200 px-5 py-4">
-              <h2 className="text-base font-semibold">Oldest student</h2>
+        <section className="grid gap-4 lg:grid-cols-[1.1fr_1.3fr]">
+          <div className="flex flex-col gap-4">
+            <div className="rounded-lg border border-zinc-200 bg-white">
+              <div className="border-b border-zinc-200 px-5 py-4">
+                <h2 className="text-base font-semibold">Oldest student</h2>
+              </div>
+              {oldestStudent ? (
+                <div className="space-y-4 p-5">
+                  <div>
+                    <p className="text-2xl font-semibold">
+                      {oldestStudent.name}
+                    </p>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      {oldestStudent.email}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg border border-zinc-200 p-4">
+                      <p className="text-sm text-zinc-500">Age</p>
+                      <p className="mt-1 text-xl font-semibold">
+                        {oldestStudent.age}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-zinc-200 p-4">
+                      <p className="text-sm text-zinc-500">Department</p>
+                      <p className="mt-1 text-xl font-semibold">
+                        {oldestStudent.department}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-5 text-sm text-zinc-500">
+                  No student records are available yet.
+                </div>
+              )}
             </div>
-            {oldestStudent ? (
-              <div className="space-y-4 p-5">
-                <div>
-                  <p className="text-2xl font-semibold">
-                    {oldestStudent.name}
-                  </p>
-                  <p className="mt-1 text-sm text-zinc-500">
-                    {oldestStudent.email}
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg border border-zinc-200 p-4">
-                    <p className="text-sm text-zinc-500">Age</p>
-                    <p className="mt-1 text-xl font-semibold">
-                      {oldestStudent.age}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-zinc-200 p-4">
-                    <p className="text-sm text-zinc-500">Department</p>
-                    <p className="mt-1 text-xl font-semibold">
-                      {oldestStudent.department}
-                    </p>
-                  </div>
-                </div>
+
+            <div className="rounded-lg border border-zinc-200 bg-white">
+              <div className="border-b border-zinc-200 px-5 py-4">
+                <h2 className="text-base font-semibold">Popular Courses (Top 3)</h2>
               </div>
-            ) : (
-              <div className="p-5 text-sm text-zinc-500">
-                No student records are available yet.
-              </div>
-            )}
+              {popularCourses.length === 0 ? (
+                <div className="p-5 text-sm text-zinc-500">
+                  No courses are available yet.
+                </div>
+              ) : (
+                <div className="space-y-4 p-5">
+                  {popularCourses.map((course) => {
+                    const width = Math.round(
+                      (course.enrollment_count / maxEnrollmentCount) * 100,
+                    );
+
+                    return (
+                      <div key={course.id}>
+                        <div className="flex items-center justify-between gap-4 text-sm">
+                          <span className="font-medium text-zinc-800">
+                            {course.name} <span className="font-mono bg-zinc-100 text-zinc-500 text-xs px-1.5 py-0.5 rounded ml-1">{course.code}</span>
+                          </span>
+                          <span className="text-zinc-500 font-semibold shrink-0">
+                            {course.enrollment_count} student{course.enrollment_count === 1 ? "" : "s"}
+                          </span>
+                        </div>
+                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-100">
+                          <div
+                            className="h-full rounded-full bg-emerald-600"
+                            style={{ width: `${width}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="rounded-lg border border-zinc-200 bg-white">

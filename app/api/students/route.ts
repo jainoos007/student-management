@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getStudents, addStudent, searchStudents } from "@/lib/student";
+import { getStudents, addStudent, searchStudents, getStudentsByCourse } from "@/lib/student";
 
 function getPositiveNumber(value: string | null, fallback: number) {
   const parsed = Number(value);
@@ -11,8 +11,16 @@ export async function GET(request: Request) {
   const query = searchParams.get("query")?.trim() ?? "";
   const page = getPositiveNumber(searchParams.get("page"), 1);
   const limit = getPositiveNumber(searchParams.get("limit"), 10);
+  const courseIdParam = searchParams.get("courseId");
 
-  const students = query ? searchStudents(query) : getStudents(page, limit);
+  let students;
+  if (courseIdParam) {
+    students = getStudentsByCourse(Number(courseIdParam), page, limit);
+  } else if (query) {
+    students = searchStudents(query);
+  } else {
+    students = getStudents(page, limit);
+  }
 
   return NextResponse.json(students);
 }

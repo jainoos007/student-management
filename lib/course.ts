@@ -83,3 +83,17 @@ export function getAverageEnrollmentsPerStudent(): number {
   return totalEnrollments / totalStudents;
 }
 
+export function getPopularCourses(limit: number = 3): (Course & { enrollment_count: number })[] {
+  const db = getDb();
+  return db
+    .prepare(`
+      SELECT c.*, COUNT(e.id) as enrollment_count FROM courses c
+      LEFT JOIN enrollments e ON c.id = e.course_id
+      GROUP BY c.id
+      ORDER BY enrollment_count DESC
+      LIMIT ?
+    `)
+    .all(limit) as (Course & { enrollment_count: number })[];
+}
+
+

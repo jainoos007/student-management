@@ -25,14 +25,36 @@ export function CourseCreateForm() {
     event.preventDefault();
     setError(null);
 
+    const nameClean = form.name.trim();
+    const codeClean = form.code.trim().toUpperCase();
+    const creditsNum = Number(form.credits);
+
+    if (!nameClean) {
+      setError("Course Name cannot be empty.");
+      return;
+    }
+
+    // Validation: 2-4 letters followed by 3-4 digits
+    const codeRegex = /^[A-Z]{2,4}\d{3,4}$/;
+    if (!codeRegex.test(codeClean)) {
+      setError("Course Code must consist of 2 to 4 letters followed by 3 to 4 digits (e.g., CS101, MATH101).");
+      return;
+    }
+
+    if (isNaN(creditsNum) || creditsNum < 1 || creditsNum > 10) {
+      setError("Credits must be a number between 1 and 10.");
+      return;
+    }
+
     const response = await fetch("/api/course", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        ...form,
-        credits: Number(form.credits),
+        name: nameClean,
+        code: codeClean,
+        credits: creditsNum,
       }),
     });
 

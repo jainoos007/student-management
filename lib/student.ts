@@ -108,3 +108,27 @@ export function getDepartmentStats(): { department: string; count: number }[] {
     .all() as { department: string; count: number }[];
   return result;
 }
+
+export function getStudentsByCourse(courseId: number, page: number = 1, limit: number = 10): Student[] {
+  const offset = (page - 1) * limit;
+  const db = getDb();
+  return db
+    .prepare(`
+      SELECT s.* FROM students s
+      JOIN enrollments e ON s.id = e.student_id
+      WHERE e.course_id = ?
+      LIMIT ? OFFSET ?
+    `)
+    .all(courseId, limit, offset) as Student[];
+}
+
+export function getTotalStudentsByCourse(courseId: number): number {
+  const db = getDb();
+  const result = db.prepare(`
+    SELECT COUNT(*) as count FROM students s
+    JOIN enrollments e ON s.id = e.student_id
+    WHERE e.course_id = ?
+  `).get(courseId) as { count: number };
+  return result.count;
+}
+

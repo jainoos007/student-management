@@ -41,7 +41,66 @@ export function CoursesTable({
   const [isPending, startTransition] = useTransition();
   const [isSearching, setIsSearching] = useState(false);
 
+  const [sortColumn, setSortColumn] = useState<"name" | "code" | "credits" | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
   const displayedCourses = searchResults ?? courses;
+
+  const sortedCourses = [...displayedCourses].sort((a, b) => {
+    if (!sortColumn) return 0;
+    const aVal = a[sortColumn];
+    const bVal = b[sortColumn];
+    if (typeof aVal === "number" && typeof bVal === "number") {
+      return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+    }
+    const aStr = String(aVal).toLowerCase();
+    const bStr = String(bVal).toLowerCase();
+    if (aStr < bStr) return sortDirection === "asc" ? -1 : 1;
+    if (aStr > bStr) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const handleSort = (column: "name" | "code" | "credits") => {
+    if (sortColumn === column) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  function exportCSV() {
+    if (displayedCourses.length === 0) return;
+    const headers = ["ID", "Name", "Code", "Credits", "Created At"];
+    const rows = displayedCourses.map((course) =>
+      [
+        course.id,
+        course.name,
+        course.code,
+        course.credits,
+        course.created_at,
+      ]
+        .map((value) => {
+          const str = String(value ?? "");
+          if (str.includes(",") || str.includes("\"") || str.includes("\n")) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        })
+        .join(","),
+    );
+
+    const csvContent = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `courses_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
   const isShowingSearchResults = searchResults !== null;
   const pageStart =
     totalCourses === 0 ? 0 : Math.min((currentPage - 1) * limit + 1, totalCourses);
@@ -189,6 +248,14 @@ export function CoursesTable({
           >
             Clear
           </button>
+          <button
+            className="h-10 rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+            type="button"
+            onClick={exportCSV}
+            disabled={displayedCourses.length === 0}
+          >
+            Export CSV
+          </button>
         </div>
       </form>
 
@@ -210,16 +277,31 @@ export function CoursesTable({
           <table className="w-full min-w-[760px] border-collapse text-left text-sm">
             <thead className="border-b border-zinc-200 bg-zinc-100 text-xs uppercase tracking-wide text-zinc-500">
               <tr>
-                <th className="px-5 py-3 font-semibold">ID</th>
-                <th className="px-5 py-3 font-semibold">Name</th>
-                <th className="px-5 py-3 font-semibold">Code</th>
-                <th className="px-5 py-3 font-semibold">Credits</th>
-                <th className="px-5 py-3 font-semibold">Created At</th>
-                <th className="px-5 py-3 text-right font-semibold">Actions</th>
+                <th className="px-5 py-3 font-semibold select-none">ID</th>
+                <th
+                  onClick={() => handleSort("name")}
+                  className="px-5 py-3 font-semibold cursor-pointer select-none hover:bg-zinc-200"
+                >
+                  Name {sortColumn === "name" ? (sortDirection === "asc" ? "▲" : "▼") : ""}
+                </th>
+                <th
+                  onClick={() => handleSort("code")}
+                  className="px-5 py-3 font-semibold cursor-pointer select-none hover:bg-zinc-200"
+                >
+                  Code {sortColumn === "code" ? (sortDirection === "asc" ? "▲" : "▼") : ""}
+                </th>
+                <th
+                  onClick={() => handleSort("credits")}
+                  className="px-5 py-3 font-semibold cursor-pointer select-none hover:bg-zinc-200"
+                >
+                  Credits {sortColumn === "credits" ? (sortDirection === "asc" ? "▲" : "▼") : ""}
+                </th>
+                <th className="px-5 py-3 font-semibold select-none">Created At</th>
+                <th className="px-5 py-3 text-right font-semibold select-none">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {displayedCourses.map((course) => {
+              {sortedCourses.map((course) => {
                 const isEditing = editingId === course.id;
 
                 return (
