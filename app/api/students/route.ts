@@ -25,25 +25,38 @@ export async function GET(request: Request) {
   return NextResponse.json(students);
 }
 
+import { StudentSchema } from "@/lib/schemas";
+
 export async function POST(request: Request) {
-  const body = await request.json();
-  const { name, email, department } = body;
-  const age = Number(body.age);
-
-  if (!name || !email || !age || !department) {
-    return NextResponse.json(
-      { message: "Missing required fields" },
-      { status: 400 },
-    );
-  }
-
   try {
-    addStudent({ name, email, age, department });
+    const body = await request.json();
+    const result = StudentSchema.safeParse({
+      name: body.name,
+      email: body.email,
+      age: Number(body.age),
+      department: body.department,
+    });
+
+    if (!result.success) {
+      return NextResponse.json(
+        { message: result.error.issues[0].message },
+        { status: 400 },
+      );
+    }
+
+    addStudent(result.data);
     return NextResponse.json(
       { message: "Student added successfully" },
       { status: 201 },
     );
-  } catch {
+  } catch (err: any) {
+    const msg = err.message || "";
+    if (msg.includes("UNIQUE constraint failed")) {
+      return NextResponse.json(
+        { message: "A student with this email address is already registered" },
+        { status: 409 },
+      );
+    }
     return NextResponse.json(
       { message: "Error adding student" },
       { status: 500 },

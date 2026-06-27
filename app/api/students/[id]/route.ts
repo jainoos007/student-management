@@ -1,39 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateStudent, deleteStudent } from "@/lib/student";
 
+import { StudentUpdateSchema } from "@/lib/schemas";
+
 export async function PUT(
   request: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const body = await request.json();
-  const { id } = await ctx.params;
+  try {
+    const body = await request.json();
+    const { id } = await ctx.params;
 
-  if (!body.name || !body.email || !body.age || !body.department) {
+    const result = StudentUpdateSchema.safeParse({
+      id: Number(id),
+      name: body.name,
+      email: body.email,
+      age: Number(body.age),
+      department: body.department,
+    });
+
+    if (!result.success) {
+      return NextResponse.json(
+        { message: result.error.issues[0].message },
+        { status: 400 },
+      );
+    }
+
+    updateStudent(result.data);
+
     return NextResponse.json(
-      { message: "Missing required fields" },
-      { status: 400 },
+      { message: "Student updated successfully" },
+      { status: 200 },
+    );
+  } catch (err: any) {
+    const msg = err.message || "";
+    if (msg.includes("UNIQUE constraint failed")) {
+      return NextResponse.json(
+        { message: "Another student is already using this email address" },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json(
+      { message: "Error updating student" },
+      { status: 500 },
     );
   }
-
-  if (body.age <= 0) {
-    return NextResponse.json(
-      { message: "Age must be a positive number" },
-      { status: 400 },
-    );
-  }
-
-  updateStudent({
-    id: Number(id),
-    name: body.name,
-    email: body.email,
-    age: body.age,
-    department: body.department,
-  });
-
-  return NextResponse.json(
-    { message: "Student updated successfully" },
-    { status: 201 },
-  );
 }
 
 export async function DELETE(

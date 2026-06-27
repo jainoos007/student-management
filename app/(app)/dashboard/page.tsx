@@ -10,14 +10,13 @@ import { getTotalCourses, getAverageEnrollmentsPerStudent, getPopularCourses } f
 import { 
   Users, 
   BookOpen, 
-  GraduationCap, 
   Building2, 
   Award, 
   CalendarDays,
   ArrowRight,
   TrendingUp,
-  UserCheck
 } from "lucide-react";
+import DashboardAuditFeed from "@/components/DashboardAuditFeed";
 
 export const metadata = {
   title: "Dashboard - EduSuite",
@@ -33,17 +32,38 @@ export default async function DashboardPage() {
   const departmentStats = getDepartmentStats();
   const totalCourses = getTotalCourses();
   const averageEnrollments = getAverageEnrollmentsPerStudent();
-  const popularCourses = getPopularCourses(3);
-
-  const maxDepartmentCount = Math.max(
-    1,
-    ...departmentStats.map((department) => department.count),
-  );
+  const popularCourses = getPopularCourses(5);
 
   const maxEnrollmentCount = Math.max(
     1,
     ...popularCourses.map((course) => course.enrollment_count),
   );
+
+  const departmentColors = [
+    { bg: "bg-indigo-500", text: "text-indigo-500", hex: "#6366f1" },
+    { bg: "bg-purple-500", text: "text-purple-500", hex: "#a855f7" },
+    { bg: "bg-amber-500", text: "text-amber-500", hex: "#f59e0b" },
+    { bg: "bg-emerald-500", text: "text-emerald-500", hex: "#10b981" },
+    { bg: "bg-rose-500", text: "text-rose-500", hex: "#f43f5e" },
+    { bg: "bg-blue-500", text: "text-blue-500", hex: "#3b82f6" },
+  ];
+
+  // Calculate donut slices for department distribution
+  let cumulativeLength = 0;
+  const donutSlices = departmentStats.map((dept, index) => {
+    const percentage = totalStudents === 0 ? 0 : dept.count / totalStudents;
+    const strokeLength = percentage * 314.16;
+    const strokeOffset = -cumulativeLength;
+    cumulativeLength += strokeLength;
+    const colorInfo = departmentColors[index % departmentColors.length];
+    return {
+      ...dept,
+      percentage,
+      strokeLength,
+      strokeOffset,
+      color: colorInfo,
+    };
+  });
 
   return (
     <main className="p-6 sm:p-8 lg:p-10 text-zinc-950 dark:text-zinc-50 min-h-screen">
@@ -81,7 +101,7 @@ export default async function DashboardPage() {
           {/* Card 1 */}
           <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-5 shadow-sm hover:shadow-md dark:hover:border-zinc-700 transition-all duration-200 flex flex-col justify-between min-h-32 relative overflow-hidden group">
             <div className="flex items-start justify-between">
-              <span className="text-sm font-medium text-zinc-400 dark:text-zinc-500">Total Students</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Total Students</span>
               <div className="h-8 w-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
                 <Users className="h-4 w-4" />
               </div>
@@ -95,7 +115,7 @@ export default async function DashboardPage() {
           {/* Card 2 */}
           <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-5 shadow-sm hover:shadow-md dark:hover:border-zinc-700 transition-all duration-200 flex flex-col justify-between min-h-32 relative overflow-hidden group">
             <div className="flex items-start justify-between">
-              <span className="text-sm font-medium text-zinc-400 dark:text-zinc-500">Average Age</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Average Age</span>
               <div className="h-8 w-8 rounded-lg bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center">
                 <CalendarDays className="h-4 w-4" />
               </div>
@@ -111,7 +131,7 @@ export default async function DashboardPage() {
           {/* Card 3 */}
           <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-5 shadow-sm hover:shadow-md dark:hover:border-zinc-700 transition-all duration-200 flex flex-col justify-between min-h-32 relative overflow-hidden group">
             <div className="flex items-start justify-between">
-              <span className="text-sm font-medium text-zinc-400 dark:text-zinc-500">Departments</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Departments</span>
               <div className="h-8 w-8 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center">
                 <Building2 className="h-4 w-4" />
               </div>
@@ -125,7 +145,7 @@ export default async function DashboardPage() {
           {/* Card 4 */}
           <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-5 shadow-sm hover:shadow-md dark:hover:border-zinc-700 transition-all duration-200 flex flex-col justify-between min-h-32 relative overflow-hidden group">
             <div className="flex items-start justify-between">
-              <span className="text-sm font-medium text-zinc-400 dark:text-zinc-500">Total Courses</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Total Courses</span>
               <div className="h-8 w-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                 <BookOpen className="h-4 w-4" />
               </div>
@@ -139,7 +159,7 @@ export default async function DashboardPage() {
           {/* Card 5 */}
           <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-5 shadow-sm hover:shadow-md dark:hover:border-zinc-700 transition-all duration-200 flex flex-col justify-between min-h-32 relative overflow-hidden group">
             <div className="flex items-start justify-between">
-              <span className="text-sm font-medium text-zinc-400 dark:text-zinc-500">Avg Enrollments</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Avg Enrollments</span>
               <div className="h-8 w-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                 <TrendingUp className="h-4 w-4" />
               </div>
@@ -154,12 +174,140 @@ export default async function DashboardPage() {
         </section>
 
         {/* Dynamic Analytics Panels */}
-        <section className="grid gap-6 lg:grid-cols-[1.1fr_1.3fr]">
+        <section className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
           
-          {/* Left Column: Oldest Student & Popular Courses */}
+          {/* Left Column: Visual Analytics (Donut Chart & Horizontal Bars) */}
           <div className="flex flex-col gap-6">
             
-            {/* Oldest Student Widget */}
+            {/* Department Distribution (Radial SVG Donut Chart) */}
+            <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden p-5 flex flex-col justify-between">
+              <div>
+                <div className="border-b border-zinc-200/60 dark:border-zinc-800/60 pb-4 mb-4 flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-zinc-450 dark:text-zinc-400" />
+                  <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">
+                    Department Distribution
+                  </h2>
+                </div>
+                {departmentStats.length === 0 ? (
+                  <div className="py-12 text-sm text-zinc-450 dark:text-zinc-500 text-center italic">
+                    Register students to activate department metrics.
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row items-center justify-around gap-6 py-2">
+                    {/* SVG Donut Chart wrapper */}
+                    <div className="relative h-32 w-32 shrink-0">
+                      <svg viewBox="0 0 120 120" className="h-full w-full transform -rotate-95">
+                        {/* Background track */}
+                        <circle
+                          cx="60"
+                          cy="60"
+                          r="50"
+                          fill="transparent"
+                          className="stroke-zinc-100 dark:stroke-zinc-800/60"
+                          strokeWidth="10"
+                        />
+                        {/* Slices */}
+                        {donutSlices.map((slice, i) => (
+                          <circle
+                            key={i}
+                            cx="60"
+                            cy="60"
+                            r="50"
+                            fill="transparent"
+                            stroke={slice.color.hex}
+                            strokeWidth="10"
+                            strokeDasharray={`${slice.strokeLength} 314.16`}
+                            strokeDashoffset={slice.strokeOffset}
+                            className="transition-all duration-500"
+                          />
+                        ))}
+                      </svg>
+                      {/* Centered text markup */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-2xl font-bold text-zinc-900 dark:text-white leading-none">
+                          {totalStudents}
+                        </span>
+                        <span className="text-[8px] uppercase tracking-wider text-zinc-450 dark:text-zinc-500 font-bold mt-1">
+                          Total
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Chart Legends */}
+                    <div className="flex-1 space-y-2.5 w-full">
+                      {donutSlices.map((slice, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className={`h-2.5 w-2.5 rounded-full ${slice.color.bg}`} />
+                            <span className="font-medium text-zinc-650 dark:text-zinc-350">
+                              {slice.department}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="font-bold text-zinc-850 dark:text-zinc-150">
+                              {slice.count}
+                            </span>
+                            <span className="text-zinc-400 text-[10px] w-10 text-right">
+                              {Math.round(slice.percentage * 100)}%
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Popular Courses (Horizontal Bar Chart) */}
+            <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden p-5">
+              <div className="border-b border-zinc-200/60 dark:border-zinc-800/60 pb-4 mb-4 flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-emerald-500" />
+                <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Popular Courses Overview</h2>
+              </div>
+              {popularCourses.length === 0 ? (
+                <div className="py-12 text-sm text-zinc-450 dark:text-zinc-500 text-center italic">
+                  No courses are in catalog yet.
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {popularCourses.map((course) => {
+                    const width = Math.round(
+                      (course.enrollment_count / maxEnrollmentCount) * 100,
+                    );
+
+                    return (
+                      <div key={course.id} className="group/item">
+                        <div className="flex items-center justify-between gap-4 text-xs">
+                          <span className="font-semibold text-zinc-855 dark:text-zinc-200 flex items-center gap-2">
+                            <span className="text-zinc-900 dark:text-white">{course.name}</span>
+                            <span className="font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-[9px] px-1.5 py-0.5 rounded font-bold">{course.code}</span>
+                          </span>
+                          <span className="text-zinc-500 dark:text-zinc-400 font-semibold text-[10px] shrink-0 bg-zinc-50 dark:bg-zinc-950 px-2 py-0.5 rounded border border-zinc-100 dark:border-zinc-800/50">
+                            {course.enrollment_count} student{course.enrollment_count === 1 ? "" : "s"}
+                          </span>
+                        </div>
+                        <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800/50">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 dark:from-emerald-400 dark:to-teal-300 transition-all duration-500"
+                            style={{ width: `${width}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Live Audit Trails Feed & Featured Record */}
+          <div className="flex flex-col gap-6">
+            
+            {/* Live Activity logs stream component */}
+            <DashboardAuditFeed />
+
+            {/* Featured Oldest Record Widget */}
             <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
               <div className="border-b border-zinc-200/60 dark:border-zinc-800/60 px-5 py-4 flex items-center gap-2">
                 <Award className="h-5 w-5 text-zinc-400 dark:text-zinc-500" />
@@ -168,23 +316,23 @@ export default async function DashboardPage() {
               {oldestStudent ? (
                 <div className="p-5 flex flex-col gap-4">
                   <div>
-                    <p className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">
+                    <p className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">
                       {oldestStudent.name}
                     </p>
-                    <p className="mt-0.5 text-xs font-medium text-zinc-400 dark:text-zinc-500">
+                    <p className="mt-0.5 text-xs font-semibold text-zinc-450 dark:text-zinc-500">
                       {oldestStudent.email}
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3 mt-1">
-                    <div className="rounded-lg border border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/40 p-4">
-                      <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">Age Metric</p>
-                      <p className="mt-1 text-xl font-bold text-zinc-900 dark:text-white">
+                    <div className="rounded-lg border border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/40 p-3.5">
+                      <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-wide">Age Metric</p>
+                      <p className="mt-1 text-lg font-bold text-zinc-900 dark:text-white">
                         {oldestStudent.age} <span className="text-xs font-normal text-zinc-400">years old</span>
                       </p>
                     </div>
-                    <div className="rounded-lg border border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/40 p-4">
-                      <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">Department Division</p>
-                      <p className="mt-1 text-xl font-bold text-zinc-900 dark:text-white">
+                    <div className="rounded-lg border border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/40 p-3.5">
+                      <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-wide">Department</p>
+                      <p className="mt-1 text-base font-bold text-zinc-900 dark:text-white truncate">
                         {oldestStudent.department}
                       </p>
                     </div>
@@ -196,99 +344,9 @@ export default async function DashboardPage() {
                 </div>
               )}
             </div>
-
-            {/* Popular Courses Widget */}
-            <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
-              <div className="border-b border-zinc-200/60 dark:border-zinc-800/60 px-5 py-4 flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-emerald-500" />
-                <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Popular Courses</h2>
-              </div>
-              {popularCourses.length === 0 ? (
-                <div className="p-6 text-sm text-zinc-400 dark:text-zinc-500 text-center italic">
-                  No courses are available yet.
-                </div>
-              ) : (
-                <div className="p-5 flex flex-col gap-5">
-                  {popularCourses.map((course) => {
-                    const width = Math.round(
-                      (course.enrollment_count / maxEnrollmentCount) * 100,
-                    );
-
-                    return (
-                      <div key={course.id} className="group/item">
-                        <div className="flex items-center justify-between gap-4 text-sm">
-                          <span className="font-medium text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
-                            <span className="text-zinc-900 dark:text-white">{course.name}</span>
-                            <span className="font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-[10px] px-1.5 py-0.5 rounded font-semibold">{course.code}</span>
-                          </span>
-                          <span className="text-zinc-500 dark:text-zinc-400 font-semibold text-xs shrink-0 bg-zinc-50 dark:bg-zinc-950 px-2 py-1 rounded-md border border-zinc-100 dark:border-zinc-800 group-hover/item:text-zinc-800 dark:group-hover/item:text-zinc-200 transition-colors">
-                            {course.enrollment_count} student{course.enrollment_count === 1 ? "" : "s"}
-                          </span>
-                        </div>
-                        <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800/50">
-                          <div
-                            className="h-full rounded-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-500"
-                            style={{ width: `${width}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right Column: Department distribution */}
-          <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden flex flex-col justify-between">
-            <div>
-              <div className="border-b border-zinc-200/60 dark:border-zinc-800/60 px-5 py-4 flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-zinc-400 dark:text-zinc-500" />
-                <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">
-                  Department Distribution
-                </h2>
-              </div>
-              {departmentStats.length === 0 ? (
-                <div className="p-6 text-sm text-zinc-400 dark:text-zinc-500 text-center italic">
-                  Add students to see department totals.
-                </div>
-              ) : (
-                <div className="p-5 flex flex-col gap-5">
-                  {departmentStats.map((department) => {
-                    const width = Math.round(
-                      (department.count / maxDepartmentCount) * 100,
-                    );
-
-                    return (
-                      <div key={department.department} className="group/dept">
-                        <div className="flex items-center justify-between gap-4 text-sm">
-                          <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                            {department.department}
-                          </span>
-                          <span className="text-zinc-500 dark:text-zinc-400 font-semibold font-mono bg-zinc-50 dark:bg-zinc-950 px-2.5 py-0.5 rounded border border-zinc-100 dark:border-zinc-800">
-                            {department.count}
-                          </span>
-                        </div>
-                        <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800/50">
-                          <div
-                            className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400 transition-all duration-500"
-                            style={{ width: `${width}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            <div className="border-t border-zinc-100 dark:border-zinc-850 p-4 bg-zinc-50/50 dark:bg-zinc-950/20 text-center text-xs text-zinc-400 flex items-center justify-center gap-1.5">
-              <UserCheck className="h-4 w-4 text-zinc-400" />
-              <span>Real-time administrative stats active</span>
-            </div>
           </div>
         </section>
       </div>
     </main>
   );
 }
-

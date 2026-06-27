@@ -17,38 +17,40 @@ export async function GET(request: Request) {
   return NextResponse.json(courses);
 }
 
+import { CourseSchema } from "@/lib/schemas";
+
 export async function POST(request: Request) {
-  const body = await request.json();
-  const { name, code } = body;
-  const credits = Number(body.credits);
-
-  if (!name || !code || !credits) {
-    return NextResponse.json(
-      {
-        message: "Missing required fields",
-      },
-      { status: 400 },
-    );
-  }
-
   try {
-    addCourses({ name, code, credits });
+    const body = await request.json();
+    const result = CourseSchema.safeParse({
+      name: body.name,
+      code: body.code,
+      credits: Number(body.credits),
+    });
+
+    if (!result.success) {
+      return NextResponse.json(
+        { message: result.error.issues[0].message },
+        { status: 400 },
+      );
+    }
+
+    addCourses(result.data);
     return NextResponse.json(
-      {
-        message: "Course added successfully",
-      },
-      {
-        status: 201,
-      },
+      { message: "Course added successfully" },
+      { status: 201 },
     );
-  } catch {
+  } catch (err: any) {
+    const msg = err.message || "";
+    if (msg.includes("UNIQUE constraint failed")) {
+      return NextResponse.json(
+        { message: "A course with this code prefix already exists in catalog" },
+        { status: 409 },
+      );
+    }
     return NextResponse.json(
-      {
-        message: "Error adding course",
-      },
-      {
-        status: 500,
-      },
+      { message: "Error adding course" },
+      { status: 505 },
     );
   }
 }

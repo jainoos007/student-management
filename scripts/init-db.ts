@@ -40,4 +40,16 @@ db.exec(`
   )
   `);
 
+// Audit Logs
+db.exec(`
+  CREATE TABLE IF NOT EXISTS audit_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id INTEGER,
+    details TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )
+  `);
+
 console.log("Database initialized successfully.");

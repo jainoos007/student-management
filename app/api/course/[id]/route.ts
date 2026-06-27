@@ -1,53 +1,46 @@
 import { deleteCourse, updateCourse } from "@/lib/course";
 import { NextRequest, NextResponse } from "next/server";
 
+import { CourseUpdateSchema } from "@/lib/schemas";
+
 export async function PUT(
   request: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const body = await request.json();
-  const { id } = await ctx.params;
-
-  if (!body.name || !body.code || !body.credits) {
-    return NextResponse.json(
-      {
-        message: "Missing required fields",
-      },
-      { status: 400 },
-    );
-  }
-
-  if (body.credits <= 0) {
-    return NextResponse.json(
-      {
-        message: "Credits must be positive number",
-      },
-      {
-        status: 400,
-      },
-    );
-  }
   try {
-    updateCourse({
+    const body = await request.json();
+    const { id } = await ctx.params;
+
+    const result = CourseUpdateSchema.safeParse({
       id: Number(id),
       name: body.name,
       code: body.code,
       credits: Number(body.credits),
     });
 
+    if (!result.success) {
+      return NextResponse.json(
+        { message: result.error.issues[0].message },
+        { status: 400 },
+      );
+    }
+
+    updateCourse(result.data);
+
     return NextResponse.json(
-      {
-        message: "Course updated successfully",
-      },
-      {
-        status: 201,
-      },
+      { message: "Course updated successfully" },
+      { status: 200 },
     );
-  } catch {
+  } catch (err: any) {
+    const msg = err.message || "";
+    if (msg.includes("UNIQUE constraint failed")) {
+      return NextResponse.json(
+        { message: "Another course in the catalog is already using this code prefix" },
+        { status: 409 },
+      );
+    }
     return NextResponse.json(
-      {
-        message: "Error updating course",
-      },
+      { message: "Error updating course" },
       { status: 500 },
     );
   }

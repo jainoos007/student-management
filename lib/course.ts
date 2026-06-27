@@ -1,5 +1,6 @@
 import { getDb } from "./db";
 import { Course } from "@/types/course";
+import { addAuditLog } from "./audit";
 
 type CourseUpdate = Pick<Course, "id" | "name" | "code" | "credits">;
 
@@ -17,29 +18,60 @@ export function getCourses(page: number = 1, limit: number = 10) {
 export function addCourses(course: Omit<Course, "id" | "created_at">) {
   const db = getDb();
   const created_at = new Date().toISOString();
-  return db
+  const result = db
     .prepare(
       `
     INSERT INTO courses (name, code, credits, created_at) VALUES (?,?,?,?)
     `,
     )
     .run(course.name, course.code, course.credits, created_at);
+
+  if (result.changes > 0) {
+    addAuditLog(
+      "CREATE_COURSE",
+      "COURSE",
+      Number(result.lastInsertRowid),
+      `Created course catalog entry ${course.name} [${course.code}] worth ${course.credits} credits.`
+    );
+  }
+  return result;
 }
 
 export function updateCourse(course: CourseUpdate) {
   const db = getDb();
-  return db
+  const result = db
     .prepare(
       `
         UPDATE courses SET name = ? , code = ? , credits = ? WHERE id = ?
         `,
     )
     .run(course.name, course.code, course.credits, course.id);
+
+  if (result.changes > 0) {
+    addAuditLog(
+      "UPDATE_COURSE",
+      "COURSE",
+      course.id,
+      `Updated course detail parameters for ${course.name} [${course.code}] (credits: ${course.credits}).`
+    );
+  }
+  return result;
 }
 
 export function deleteCourse(id: number) {
   const db = getDb();
-  return db.prepare(`DELETE FROM courses WHERE id = ?`).run(id);
+  const course = db.prepare("SELECT * FROM courses WHERE id = ?").get(id) as Course | undefined;
+  const result = db.prepare(`DELETE FROM courses WHERE id = ?`).run(id);
+
+  if (result.changes > 0 && course) {
+    addAuditLog(
+      "DELETE_COURSE",
+      "COURSE",
+      id,
+      `Removed course catalog listing for ${course.name} [${course.code}].`
+    );
+  }
+  return result;
 }
 
 export function getStudentCourses(studentId: number) {

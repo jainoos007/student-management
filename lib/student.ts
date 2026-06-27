@@ -1,5 +1,6 @@
 import { getDb } from "./db";
 import type { Student } from "@/types/student";
+import { addAuditLog } from "./audit";
 
 type StudentUpdate = Pick<
   Student,
@@ -17,7 +18,7 @@ export function getStudents(page: number = 1, limit: number = 10): Student[] {
 export function addStudent(student: Omit<Student, "id" | "created_at">) {
   const db = getDb();
   const createdAt = new Date().toISOString();
-  return db
+  const result = db
     .prepare(
       `
       INSERT INTO students (name, email, age, department, created_at) VALUES (?, ?, ?, ?, ?) `,
@@ -29,11 +30,21 @@ export function addStudent(student: Omit<Student, "id" | "created_at">) {
       student.department,
       createdAt,
     );
+
+  if (result.changes > 0) {
+    addAuditLog(
+      "CREATE_STUDENT",
+      "STUDENT",
+      Number(result.lastInsertRowid),
+      `Registered student ${student.name} (${student.email}) in ${student.department} department.`
+    );
+  }
+  return result;
 }
 
 export function updateStudent(student: StudentUpdate) {
   const db = getDb();
-  return db
+  const result = db
     .prepare(
       `
     UPDATE students
@@ -47,11 +58,32 @@ export function updateStudent(student: StudentUpdate) {
       student.department,
       student.id,
     );
+
+  if (result.changes > 0) {
+    addAuditLog(
+      "UPDATE_STUDENT",
+      "STUDENT",
+      student.id,
+      `Updated details for student ${student.name} (age ${student.age}, dept ${student.department}).`
+    );
+  }
+  return result;
 }
 
 export function deleteStudent(id: number) {
   const db = getDb();
-  return db.prepare("DELETE FROM students WHERE id = ?").run(id);
+  const student = db.prepare("SELECT * FROM students WHERE id = ?").get(id) as Student | undefined;
+  const result = db.prepare("DELETE FROM students WHERE id = ?").run(id);
+
+  if (result.changes > 0 && student) {
+    addAuditLog(
+      "DELETE_STUDENT",
+      "STUDENT",
+      id,
+      `Deleted student record for ${student.name} (${student.email}).`
+    );
+  }
+  return result;
 }
 
 export function searchStudents(query: string): Student[] {

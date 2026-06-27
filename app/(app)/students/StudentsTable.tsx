@@ -714,9 +714,30 @@ export function StudentsTable({
       {/* Pagination Footer */}
       {!isShowingSearchResults && (
         <div className="flex flex-col gap-4 border-t border-zinc-100 dark:border-zinc-800 pt-4 text-sm text-zinc-500 sm:flex-row sm:items-center sm:justify-between px-1">
-          <p className="text-xs font-medium">
-            Showing <strong className="text-zinc-700 dark:text-zinc-300 font-semibold">{pageStart}-{pageEnd}</strong> of <strong className="text-zinc-700 dark:text-zinc-300 font-semibold">{totalStudents}</strong> student records
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+            <p className="text-xs font-medium">
+              Showing <strong className="text-zinc-700 dark:text-zinc-300 font-semibold">{pageStart}-{pageEnd}</strong> of <strong className="text-zinc-700 dark:text-zinc-300 font-semibold">{totalStudents}</strong> student records
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium">Rows per page:</span>
+              <Select
+                value={String(limit)}
+                onValueChange={(val) => {
+                  router.push(`/students?page=1&limit=${val}`);
+                }}
+              >
+                <SelectTrigger className="w-16 h-8 text-[11px] border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200">
+                  <SelectValue placeholder={String(limit)} />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 animate-in fade-in-80">
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <div className="flex items-center gap-3">
             {currentPage > 1 ? (
               <Link
