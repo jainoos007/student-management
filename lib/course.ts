@@ -107,6 +107,14 @@ export function getTotalCourses(): number {
   return result.count;
 }
 
+export function getTotalCredits(): number {
+  const db = getDb();
+  const result = db.prepare("SELECT SUM(credits) as sum FROM courses").get() as {
+    sum: number | null;
+  };
+  return result.sum || 0;
+}
+
 export function getAverageEnrollmentsPerStudent(): number {
   const db = getDb();
   const totalStudents = (db.prepare("SELECT COUNT(*) as count FROM students").get() as { count: number }).count;

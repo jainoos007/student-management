@@ -2,12 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Plus, BookOpen, AlertCircle, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, BookOpen, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 type CreateCourseFormState = {
   name: string;
@@ -26,7 +33,7 @@ export function CourseCreateForm() {
   const [form, setForm] = useState<CreateCourseFormState>(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   async function createCourse(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -79,7 +86,7 @@ export function CourseCreateForm() {
 
     const addedName = nameClean;
     setForm(emptyForm);
-    setIsExpanded(false);
+    setIsOpen(false);
     toast.success(`Course "${addedName}" added successfully`);
     startTransition(() => {
       router.refresh();
@@ -87,117 +94,122 @@ export function CourseCreateForm() {
   }
 
   return (
-    <Card className="overflow-hidden border-zinc-200/80 dark:border-zinc-800/80 shadow-sm transition-colors duration-350">
-      {/* Header section with toggle */}
-      <button
-        type="button"
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-6 py-5 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-all text-left outline-none"
+    <Dialog open={isOpen} onOpenChange={(val) => {
+      setIsOpen(val);
+      if (!val) {
+        setForm(emptyForm);
+        setError(null);
+      }
+    }}>
+      <Button
+        onClick={() => setIsOpen(true)}
+        className="h-10 bg-zinc-950 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100 px-4 text-xs font-semibold shadow-sm flex items-center gap-1.5 transition-all"
       >
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-lg bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 flex items-center justify-center shadow-sm">
-            <BookOpen className="h-5 w-5" />
+        <Plus className="h-4 w-4" />
+        <span>Register Course</span>
+      </Button>
+      
+      <DialogContent className="sm:max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-xl rounded-xl">
+        <DialogHeader>
+          <DialogTitle className="text-zinc-950 dark:text-white font-bold flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-zinc-800 dark:text-zinc-200" />
+            <span>Create Catalog Course</span>
+          </DialogTitle>
+          <DialogDescription className="text-zinc-400 dark:text-zinc-500">
+            Enter the details below to add a new course record to the system directory.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={createCourse} className="space-y-4 py-2">
+          {error && (
+            <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-955/25 px-4 py-3 text-xs text-red-700 dark:text-red-400 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <div className="space-y-3.5">
+            <div className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+              <span className="text-zinc-600 dark:text-zinc-450">Course Name</span>
+              <Input
+                required
+                placeholder="e.g., Introduction to Computer Science"
+                value={form.name}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    name: event.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                <span className="text-zinc-600 dark:text-zinc-455">Course Code</span>
+                <Input
+                  required
+                  placeholder="e.g., CS101"
+                  value={form.code}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      code: event.target.value.toUpperCase(),
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                <span className="text-zinc-600 dark:text-zinc-450">Credits</span>
+                <Input
+                  min={1}
+                  max={10}
+                  required
+                  type="number"
+                  placeholder="e.g., 3"
+                  value={form.credits}
+                  className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      credits: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
           </div>
-          <div>
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Create Catalog Course</h2>
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">Click to toggle the creation drawer.</p>
-          </div>
-        </div>
-        <div className="h-8 w-8 rounded-full border border-zinc-100 dark:border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors bg-white dark:bg-zinc-900">
-          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </div>
-      </button>
 
-      {/* Collapsible Form Body */}
-      <AnimatePresence initial={false}>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
-          >
-            <CardContent className="border-t border-zinc-100 dark:border-zinc-800/60 p-6 bg-zinc-50/30 dark:bg-zinc-950/20">
-              <form onSubmit={createCourse}>
-                {error && (
-                  <div className="mb-4 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/25 px-4 py-3 text-xs text-red-700 dark:text-red-400 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 shrink-0" />
-                    <span>{error}</span>
-                  </div>
-                )}
-
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_auto] items-end">
-                  <label className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                    Course Name
-                    <Input
-                      required
-                      placeholder="e.g., Introduction to Computer Science"
-                      value={form.name}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          name: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-                  
-                  <label className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                    Course Code
-                    <Input
-                      required
-                      placeholder="e.g., CS101"
-                      value={form.code}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          code: event.target.value.toUpperCase(),
-                        }))
-                      }
-                    />
-                  </label>
-
-                  <label className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                    Credits
-                    <Input
-                      min={1}
-                      max={10}
-                      required
-                      type="number"
-                      placeholder="e.g., 3"
-                      value={form.credits}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          credits: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-
-                  <Button
-                    disabled={isPending}
-                    type="submit"
-                    className="h-10 px-5 text-sm font-semibold shadow-sm flex items-center justify-center gap-1.5 whitespace-nowrap bg-zinc-950 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
-                  >
-                    {isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Creating...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4" />
-                        <span>Create Course</span>
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </Card>
+          <DialogFooter className="pt-4 flex items-center justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsOpen(false)}
+              className="h-10 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={isPending}
+              type="submit"
+              className="h-10 px-5 text-sm font-semibold shadow-sm flex items-center justify-center gap-1.5 bg-zinc-950 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Creating...</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4" />
+                  <span>Create Course</span>
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
