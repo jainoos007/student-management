@@ -184,3 +184,47 @@ export function getDepartments(): string[] {
   return results.map((r) => r.department);
 }
 
+export function queryStudents(options: {
+  query?: string;
+  courseId?: number;
+  department?: string;
+  page?: number;
+  limit?: number;
+}): Student[] {
+  const page = options.page ?? 1;
+  const limit = options.limit ?? 10;
+  const offset = (page - 1) * limit;
+
+  const db = getDb();
+  
+  let sql = `SELECT DISTINCT s.* FROM students s`;
+  const params: any[] = [];
+  const conditions: string[] = [];
+
+  if (options.courseId) {
+    sql += ` JOIN enrollments e ON s.id = e.student_id`;
+    conditions.push(`e.course_id = ?`);
+    params.push(options.courseId);
+  }
+
+  if (options.department) {
+    conditions.push(`s.department = ?`);
+    params.push(options.department);
+  }
+
+  if (options.query) {
+    conditions.push(`(s.name LIKE ? OR s.email LIKE ? OR s.department LIKE ?)`);
+    const likeQuery = `%${options.query}%`;
+    params.push(likeQuery, likeQuery, likeQuery);
+  }
+
+  if (conditions.length > 0) {
+    sql += ` WHERE ` + conditions.join(` AND `);
+  }
+
+  sql += ` LIMIT ? OFFSET ?`;
+  params.push(limit, offset);
+
+  return db.prepare(sql).all(...params) as Student[];
+}
+

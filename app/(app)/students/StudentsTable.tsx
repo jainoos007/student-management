@@ -22,6 +22,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { StudentCreateForm } from "./StudentCreateForm";
 
 // Official Shadcn Components
 import { 
@@ -89,6 +90,9 @@ export function StudentsTable({
   const [departments, setDepartments] = useState<string[]>([]);
   const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>("all-departments");
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+
   useEffect(() => {
     async function loadAllCourses() {
       try {
@@ -148,67 +152,44 @@ export function StudentsTable({
     }
   }
 
-  async function handleCourseFilterChange(courseId: string | null) {
-    const val = courseId ?? "all-courses";
-    setSelectedCourseFilter(val);
-    setSelectedDeptFilter("all-departments");
-    setSearchQuery("");
-    setError(null);
-    setEditingId(null);
-    setIsSearching(true);
+  // Load search results dynamically based on combined filters (with 200ms debounce)
+  useEffect(() => {
+    const isCourseActive = selectedCourseFilter !== "all-courses";
+    const isDeptActive = selectedDeptFilter !== "all-departments";
+    const isQueryActive = searchQuery.trim().length > 0;
 
-    const filterVal = val === "all-courses" ? "" : val;
-
-    if (!filterVal) {
+    if (!isCourseActive && !isDeptActive && !isQueryActive) {
       setSearchResults(null);
       setIsSearching(false);
       return;
     }
 
-    try {
-      const response = await fetch(`/api/students?courseId=${filterVal}`);
-      if (!response.ok) {
-        throw new Error("Could not filter students. Try again.");
-      }
-      const results = (await response.json()) as Student[];
-      setSearchResults(results);
-      setIsSearching(false);
-    } catch (err: any) {
-      setError(err.message || "Could not filter students.");
-      setIsSearching(false);
-    }
-  }
-
-  async function handleDeptFilterChange(dept: string | null) {
-    const val = dept ?? "all-departments";
-    setSelectedDeptFilter(val);
-    setSelectedCourseFilter("all-courses");
-    setSearchQuery("");
+    setIsSearching(true);
     setError(null);
     setEditingId(null);
-    setIsSearching(true);
 
-    const filterVal = val === "all-departments" ? "" : val;
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams();
+        if (isQueryActive) params.append("query", searchQuery.trim());
+        if (isCourseActive) params.append("courseId", selectedCourseFilter);
+        if (isDeptActive) params.append("department", selectedDeptFilter);
 
-    if (!filterVal) {
-      setSearchResults(null);
-      setIsSearching(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/students?department=${encodeURIComponent(filterVal)}`);
-      if (!response.ok) {
-        throw new Error("Could not filter students. Try again.");
+        const response = await fetch(`/api/students?${params.toString()}`);
+        if (!response.ok) {
+          throw new Error("Could not filter students. Try again.");
+        }
+        const data = await response.json();
+        setSearchResults(data);
+      } catch (err: any) {
+        setError(err.message || "An error occurred while filtering.");
+      } finally {
+        setIsSearching(false);
       }
-      const results = (await response.json()) as Student[];
-      setSearchResults(results);
-      setIsSearching(false);
-    } catch (err: any) {
-      setError(err.message || "Could not filter students.");
-      setIsSearching(false);
-    }
-  }
+    }, 200);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery, selectedCourseFilter, selectedDeptFilter]);
 
   function exportCSV() {
     if (displayedStudents.length === 0) return;
@@ -367,8 +348,6 @@ export function StudentsTable({
     }
   }
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>({
     name: "",
     email: "",
@@ -467,30 +446,6 @@ export function StudentsTable({
     });
   }
 
-  async function searchStudents(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    setEditingId(null);
-    setIsSearching(true);
-
-    const query = searchQuery.trim();
-    const response = await fetch(
-      query
-        ? `/api/students?query=${encodeURIComponent(query)}`
-        : `/api/students?page=${currentPage}&limit=${limit}`,
-    );
-
-    if (!response.ok) {
-      setError("Could not search students. Try again.");
-      setIsSearching(false);
-      return;
-    }
-
-    const results = (await response.json()) as Student[];
-    setSearchResults(results);
-    setIsSearching(false);
-  }
-
   function clearSearch() {
     setSearchQuery("");
     setSelectedCourseFilter("all-courses");
@@ -500,19 +455,19 @@ export function StudentsTable({
     setEditingId(null);
   }
 
+  const hasActiveFilters = selectedCourseFilter !== "all-courses" || selectedDeptFilter !== "all-departments";
+
   return (
     <div className="flex flex-col gap-6">
-      {/* Filtering and Query Commands Header */}
-      <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-5 shadow-sm transition-colors duration-350">
-        <form
-          className="flex flex-col gap-4 sm:flex-row sm:items-end"
-          onSubmit={searchStudents}
-        >
-          <div className="relative flex-1">
+      {/* Filtering and Query Commands Header (No Card) */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-2 border-b border-zinc-150/40 dark:border-zinc-800/20 pb-4">
+        {/* Left Search/Filters Action Group */}
+        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center w-full">
+          <div className="relative flex-1 max-w-lg min-w-72">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
               <Input
-                className="pl-9 pr-3 h-10 w-full"
+                className="pl-9 pr-3 h-10 w-full bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300"
                 placeholder="Search name, email, or department..."
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
@@ -520,9 +475,9 @@ export function StudentsTable({
             </div>
           </div>
 
-          <div className="sm:w-60">
-            <Select value={selectedCourseFilter} onValueChange={handleCourseFilterChange}>
-              <SelectTrigger className="w-full h-10 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300">
+          <div className="sm:w-52 shrink-0">
+            <Select value={selectedCourseFilter} onValueChange={(val) => setSelectedCourseFilter(val ?? "all-courses")}>
+              <SelectTrigger className="w-full h-10! border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300">
                 <SelectValue placeholder="All Courses">
                   {selectedCourseFilter === "all-courses"
                     ? "All Courses"
@@ -545,9 +500,9 @@ export function StudentsTable({
             </Select>
           </div>
 
-          <div className="sm:w-60">
-            <Select value={selectedDeptFilter} onValueChange={handleDeptFilterChange}>
-              <SelectTrigger className="w-full h-10 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300">
+          <div className="sm:w-52 shrink-0">
+            <Select value={selectedDeptFilter} onValueChange={(val) => setSelectedDeptFilter(val ?? "all-departments")}>
+              <SelectTrigger className="w-full h-10! border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300">
                 <SelectValue placeholder="All Departments">
                   {selectedDeptFilter === "all-departments" ? "All Departments" : selectedDeptFilter}
                 </SelectValue>
@@ -563,15 +518,7 @@ export function StudentsTable({
             </Select>
           </div>
 
-          <div className="flex gap-2">
-            <Button
-              disabled={isSearching}
-              type="submit"
-              className="h-10 px-5 text-sm font-semibold flex items-center gap-1.5 shadow-sm bg-zinc-950 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
-            >
-              {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              <span>Search Students</span>
-            </Button>
+          <div className="flex gap-2 shrink-0">
             <Button
               variant="outline"
               className="h-10 px-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 border-zinc-205"
@@ -591,8 +538,57 @@ export function StudentsTable({
               <span>Export</span>
             </Button>
           </div>
-        </form>
+        </div>
+
+        {/* Right Corner Primary Action Group */}
+        <div className="shrink-0 self-stretch sm:self-center flex items-center justify-end">
+          <StudentCreateForm />
+        </div>
       </div>
+
+      {/* Filter Chips Display Area */}
+      {hasActiveFilters && (
+        <div className="flex flex-wrap items-center gap-2 -mt-4 px-1">
+          <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Active filters:</span>
+          {selectedCourseFilter !== "all-courses" && (
+            <div className="inline-flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-400 text-xs px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/40">
+              <span className="font-semibold">Course:</span>
+              <span>
+                {allCourses.find((c) => String(c.id) === selectedCourseFilter)?.code || selectedCourseFilter}
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedCourseFilter("all-courses")}
+                className="hover:bg-indigo-100 dark:hover:bg-indigo-950/60 p-0.5 rounded-full text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 ml-1 transition-colors"
+                aria-label="Remove Course Filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+          {selectedDeptFilter !== "all-departments" && (
+            <div className="inline-flex items-center gap-1.5 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 text-xs px-3 py-1 rounded-full border border-purple-100 dark:border-purple-900/40">
+              <span className="font-semibold">Department:</span>
+              <span>{selectedDeptFilter}</span>
+              <button
+                type="button"
+                onClick={() => setSelectedDeptFilter("all-departments")}
+                className="hover:bg-purple-100 dark:hover:bg-purple-950/60 p-0.5 rounded-full text-purple-500 hover:text-purple-700 dark:hover:text-purple-300 ml-1 transition-colors"
+                aria-label="Remove Department Filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={clearSearch}
+            className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-semibold underline transition-colors ml-1"
+          >
+            Reset Filters
+          </button>
+        </div>
+      )}
 
       {/* Directory Table Body */}
       <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 overflow-hidden shadow-sm transition-colors duration-355">

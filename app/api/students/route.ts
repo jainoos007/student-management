@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getStudents, addStudent, searchStudents, getStudentsByCourse, getStudentsByDepartment } from "@/lib/student";
+import { getStudents, addStudent, queryStudents } from "@/lib/student";
 
 function getPositiveNumber(value: string | null, fallback: number) {
   const parsed = Number(value);
@@ -14,17 +14,18 @@ export async function GET(request: Request) {
   const courseIdParam = searchParams.get("courseId");
   const departmentParam = searchParams.get("department")?.trim();
 
-  let students;
-  if (courseIdParam) {
-    students = getStudentsByCourse(Number(courseIdParam), page, limit);
-  } else if (departmentParam) {
-    students = getStudentsByDepartment(departmentParam, page, limit);
-  } else if (query) {
-    students = searchStudents(query);
-  } else {
-    students = getStudents(page, limit);
+  if (courseIdParam || departmentParam || query) {
+    const students = queryStudents({
+      query: query || undefined,
+      courseId: courseIdParam ? Number(courseIdParam) : undefined,
+      department: departmentParam || undefined,
+      page,
+      limit: 100, // Return up to 100 matching results
+    });
+    return NextResponse.json(students);
   }
 
+  const students = getStudents(page, limit);
   return NextResponse.json(students);
 }
 
