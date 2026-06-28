@@ -611,7 +611,7 @@ export function StudentsTable({
           <div className="flex gap-2 shrink-0">
             <Button
               variant="outline"
-              className="h-10 px-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 border-zinc-205 flex items-center gap-1.5"
+              className="h-10 px-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 border-zinc-200 dark:border-zinc-800 flex items-center gap-1.5"
               type="button"
               onClick={exportCSV}
               disabled={displayedStudents.length === 0}

@@ -330,7 +330,7 @@ export function CoursesTable({
               disabled={displayedCourses.length === 0}
             >
               <Download className="h-4 w-4" />
-              <span>Export Catalog</span>
+              <span>Export</span>
             </Button>
           </div>
         </div>
