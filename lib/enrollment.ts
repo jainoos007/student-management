@@ -9,8 +9,13 @@ export function createEnrollment(
 ) {
   const db = getDb();
   const enrollmentDate = new Date().toISOString();
-  const student = db.prepare("SELECT name FROM students WHERE id = ?").get(enrollment.student_id) as { name: string } | undefined;
-  const course = db.prepare("SELECT name, code FROM courses WHERE id = ?").get(enrollment.course_id) as { name: string, code: string } | undefined;
+  const student = db.prepare("SELECT name FROM students WHERE id = ? AND deleted_at IS NULL").get(enrollment.student_id) as { name: string } | undefined;
+  const course = db.prepare("SELECT name, code FROM courses WHERE id = ? AND deleted_at IS NULL").get(enrollment.course_id) as { name: string, code: string } | undefined;
+  
+  if (!student || !course) {
+    throw new Error("Student or Course not found or has been deleted.");
+  }
+
   const result = db
     .prepare(
       `
@@ -36,7 +41,7 @@ export function updateEnrollment(enrollment: enrollmentUpdate) {
   return db
     .prepare(
       `
-        UPDATE enrollments SET student_id = ?, course_id = ? WHERE id = ?
+        UPDATE enrollments SET student_id = ?, course_id = ? WHERE id = ? AND deleted_at IS NULL
         `,
     )
     .run(enrollment.student_id, enrollment.course_id, enrollment.id);
@@ -44,7 +49,8 @@ export function updateEnrollment(enrollment: enrollmentUpdate) {
 
 export function deleteEnrollment(id: number) {
   const db = getDb();
-  const enrollment = db.prepare("SELECT * FROM enrollments WHERE id = ?").get(id) as Enrollment | undefined;
+  const deletedAt = new Date().toISOString();
+  const enrollment = db.prepare("SELECT * FROM enrollments WHERE id = ? AND deleted_at IS NULL").get(id) as Enrollment | undefined;
   let studentName = "";
   let courseCode = "";
   if (enrollment) {
@@ -53,14 +59,16 @@ export function deleteEnrollment(id: number) {
     if (student) studentName = student.name;
     if (course) courseCode = course.code;
   }
-  const result = db.prepare(`DELETE FROM enrollments WHERE id = ?`).run(id);
+  
+  // Soft delete enrollment mapping
+  const result = db.prepare(`UPDATE enrollments SET deleted_at = ? WHERE id = ?`).run(deletedAt, id);
 
   if (result.changes > 0 && enrollment) {
     addAuditLog(
       "UNENROLL_STUDENT",
       "ENROLLMENT",
       id,
-      `Unenrolled student ${studentName || `ID ${enrollment.student_id}`} from course ${courseCode || `ID ${enrollment.course_id}`}.`
+      `Unenrolled student ${studentName || `ID ${enrollment.student_id}`} from course ${courseCode || `ID ${enrollment.course_id}`} (soft delete).`
     );
   }
   return result;
@@ -73,6 +81,7 @@ export function getEnrollmentTrends(): { date: string; count: number }[] {
       .prepare(`
         SELECT SUBSTR(enrollment_date, 1, 10) as date, COUNT(*) as count
         FROM enrollments
+        WHERE deleted_at IS NULL
         GROUP BY date
         ORDER BY date ASC
       `)
@@ -82,5 +91,3 @@ export function getEnrollmentTrends(): { date: string; count: number }[] {
     return [];
   }
 }
-
-

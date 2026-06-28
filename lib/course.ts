@@ -10,7 +10,7 @@ export function getCourses(page: number = 1, limit: number = 10) {
   return db
     .prepare(
       `
-        SELECT * FROM courses LIMIT ? OFFSET ?`,
+        SELECT * FROM courses WHERE deleted_at IS NULL LIMIT ? OFFSET ?`,
     )
     .all(limit, offset) as Course[];
 }
@@ -42,7 +42,7 @@ export function updateCourse(course: CourseUpdate) {
   const result = db
     .prepare(
       `
-        UPDATE courses SET name = ? , code = ? , credits = ? WHERE id = ?
+        UPDATE courses SET name = ? , code = ? , credits = ? WHERE id = ? AND deleted_at IS NULL
         `,
     )
     .run(course.name, course.code, course.credits, course.id);
@@ -60,15 +60,23 @@ export function updateCourse(course: CourseUpdate) {
 
 export function deleteCourse(id: number) {
   const db = getDb();
-  const course = db.prepare("SELECT * FROM courses WHERE id = ?").get(id) as Course | undefined;
-  const result = db.prepare(`DELETE FROM courses WHERE id = ?`).run(id);
+  const deletedAt = new Date().toISOString();
+  const course = db.prepare("SELECT * FROM courses WHERE id = ? AND deleted_at IS NULL").get(id) as Course | undefined;
+  
+  // Soft delete course record
+  const result = db.prepare(`UPDATE courses SET deleted_at = ? WHERE id = ?`).run(deletedAt, id);
+
+  // Soft delete enrollments mapping for this course
+  if (result.changes > 0) {
+    db.prepare("UPDATE enrollments SET deleted_at = ? WHERE course_id = ? AND deleted_at IS NULL").run(deletedAt, id);
+  }
 
   if (result.changes > 0 && course) {
     addAuditLog(
       "DELETE_COURSE",
       "COURSE",
       id,
-      `Removed course catalog listing for ${course.name} [${course.code}].`
+      `Removed course catalog listing for ${course.name} [${course.code}] (soft delete).`
     );
   }
   return result;
@@ -81,7 +89,7 @@ export function getStudentCourses(studentId: number) {
       `
      SELECT c.*, e.id as enrollment_id FROM courses c
      JOIN enrollments e ON c.id = e.course_id
-     WHERE e.student_id = ?   
+     WHERE e.student_id = ? AND c.deleted_at IS NULL AND e.deleted_at IS NULL
     `,
     )
     .all(studentId) as (Course & { enrollment_id: number })[];
@@ -93,7 +101,7 @@ export function searchCourses(query: string): Course[] {
     .prepare(
       `
         SELECT * FROM courses
-        WHERE name LIKE ? OR code LIKE ? OR credits LIKE ?
+        WHERE deleted_at IS NULL AND (name LIKE ? OR code LIKE ? OR credits LIKE ?)
         `,
     )
     .all(`%${query}%`, `%${query}%`, `%${query}%`) as Course[];
@@ -101,7 +109,7 @@ export function searchCourses(query: string): Course[] {
 
 export function getTotalCourses(): number {
   const db = getDb();
-  const result = db.prepare("SELECT COUNT(*) as count FROM courses").get() as {
+  const result = db.prepare("SELECT COUNT(*) as count FROM courses WHERE deleted_at IS NULL").get() as {
     count: number;
   };
   return result.count;
@@ -109,7 +117,7 @@ export function getTotalCourses(): number {
 
 export function getTotalCredits(): number {
   const db = getDb();
-  const result = db.prepare("SELECT SUM(credits) as sum FROM courses").get() as {
+  const result = db.prepare("SELECT SUM(credits) as sum FROM courses WHERE deleted_at IS NULL").get() as {
     sum: number | null;
   };
   return result.sum || 0;
@@ -117,9 +125,9 @@ export function getTotalCredits(): number {
 
 export function getAverageEnrollmentsPerStudent(): number {
   const db = getDb();
-  const totalStudents = (db.prepare("SELECT COUNT(*) as count FROM students").get() as { count: number }).count;
+  const totalStudents = (db.prepare("SELECT COUNT(*) as count FROM students WHERE deleted_at IS NULL").get() as { count: number }).count;
   if (totalStudents === 0) return 0;
-  const totalEnrollments = (db.prepare("SELECT COUNT(*) as count FROM enrollments").get() as { count: number }).count;
+  const totalEnrollments = (db.prepare("SELECT COUNT(*) as count FROM enrollments WHERE deleted_at IS NULL").get() as { count: number }).count;
   return totalEnrollments / totalStudents;
 }
 
@@ -128,12 +136,11 @@ export function getPopularCourses(limit: number = 3): (Course & { enrollment_cou
   return db
     .prepare(`
       SELECT c.*, COUNT(e.id) as enrollment_count FROM courses c
-      LEFT JOIN enrollments e ON c.id = e.course_id
+      LEFT JOIN enrollments e ON c.id = e.course_id AND e.deleted_at IS NULL
+      WHERE c.deleted_at IS NULL
       GROUP BY c.id
       ORDER BY enrollment_count DESC
       LIMIT ?
     `)
     .all(limit) as (Course & { enrollment_count: number })[];
 }
-
-

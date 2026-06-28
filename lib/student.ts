@@ -11,7 +11,7 @@ export function getStudents(page: number = 1, limit: number = 10): Student[] {
   const offset = (page - 1) * limit;
   const db = getDb();
   return db
-    .prepare(`SELECT * FROM students ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`)
+    .prepare(`SELECT * FROM students WHERE deleted_at IS NULL ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`)
     .all(limit, offset) as Student[];
 }
 
@@ -49,7 +49,7 @@ export function updateStudent(student: StudentUpdate) {
       `
     UPDATE students
     SET name = ?, email = ?, age = ?, department = ?
-    WHERE id = ?`,
+    WHERE id = ? AND deleted_at IS NULL`,
     )
     .run(
       student.name,
@@ -72,17 +72,25 @@ export function updateStudent(student: StudentUpdate) {
 
 export function deleteStudent(id: number) {
   const db = getDb();
-  const student = db.prepare("SELECT * FROM students WHERE id = ?").get(id) as
+  const deletedAt = new Date().toISOString();
+  const student = db.prepare("SELECT * FROM students WHERE id = ? AND deleted_at IS NULL").get(id) as
     | Student
     | undefined;
-  const result = db.prepare("DELETE FROM students WHERE id = ?").run(id);
+  
+  // Soft delete student record
+  const result = db.prepare("UPDATE students SET deleted_at = ? WHERE id = ?").run(deletedAt, id);
+
+  // Soft delete associated enrollment mappings
+  if (result.changes > 0) {
+    db.prepare("UPDATE enrollments SET deleted_at = ? WHERE student_id = ? AND deleted_at IS NULL").run(deletedAt, id);
+  }
 
   if (result.changes > 0 && student) {
     addAuditLog(
       "DELETE_STUDENT",
       "STUDENT",
       id,
-      `Deleted student record for ${student.name} (${student.email}).`,
+      `Deleted student record for ${student.name} (${student.email}) (soft delete).`,
     );
   }
   return result;
@@ -94,14 +102,14 @@ export function searchStudents(query: string): Student[] {
     .prepare(
       `
     SELECT * FROM students
-    WHERE name LIKE ? OR email LIKE ? OR department LIKE ?`,
+    WHERE deleted_at IS NULL AND (name LIKE ? OR email LIKE ? OR department LIKE ?)`,
     )
     .all(`%${query}%`, `%${query}%`, `%${query}%`) as Student[];
 }
 
 export function getTotalStudents(): number {
   const db = getDb();
-  const result = db.prepare("SELECT COUNT(*) as count FROM students").get() as {
+  const result = db.prepare("SELECT COUNT(*) as count FROM students WHERE deleted_at IS NULL").get() as {
     count: number;
   };
   return result.count;
@@ -110,7 +118,7 @@ export function getTotalStudents(): number {
 export function getAverageAge(): number {
   const db = getDb();
   const result = db
-    .prepare("SELECT AVG(age) as average FROM students")
+    .prepare("SELECT AVG(age) as average FROM students WHERE deleted_at IS NULL")
     .get() as { average: number | null };
   return result.average ?? 0;
 }
@@ -121,6 +129,7 @@ export function getOldestStudent(): Student | null {
     .prepare(
       `
     SELECT * FROM students
+    WHERE deleted_at IS NULL
     ORDER BY age DESC
     LIMIT 1
     `,
@@ -136,6 +145,7 @@ export function getDepartmentStats(): { department: string; count: number }[] {
       `
     SELECT department, COUNT(*) as count
     FROM students
+    WHERE deleted_at IS NULL
     GROUP BY department
     `,
     )
@@ -155,7 +165,7 @@ export function getStudentsByCourse(
       `
       SELECT s.* FROM students s
       JOIN enrollments e ON s.id = e.student_id
-      WHERE e.course_id = ?
+      WHERE e.course_id = ? AND s.deleted_at IS NULL AND e.deleted_at IS NULL
       LIMIT ? OFFSET ?
     `,
     )
@@ -169,7 +179,7 @@ export function getTotalStudentsByCourse(courseId: number): number {
       `
     SELECT COUNT(*) as count FROM students s
     JOIN enrollments e ON s.id = e.student_id
-    WHERE e.course_id = ?
+    WHERE e.course_id = ? AND s.deleted_at IS NULL AND e.deleted_at IS NULL
   `,
     )
     .get(courseId) as { count: number };
@@ -184,14 +194,14 @@ export function getStudentsByDepartment(
   const offset = (page - 1) * limit;
   const db = getDb();
   return db
-    .prepare(`SELECT * FROM students WHERE department = ? LIMIT ? OFFSET ?`)
+    .prepare(`SELECT * FROM students WHERE department = ? AND deleted_at IS NULL LIMIT ? OFFSET ?`)
     .all(department, limit, offset) as Student[];
 }
 
 export function getDepartments(): string[] {
   const db = getDb();
   const results = db
-    .prepare("SELECT DISTINCT department FROM students ORDER BY department ASC")
+    .prepare("SELECT DISTINCT department FROM students WHERE deleted_at IS NULL ORDER BY department ASC")
     .all() as { department: string }[];
   return results.map((r) => r.department);
 }
@@ -211,11 +221,12 @@ export function queryStudents(options: {
 
   let sql = `SELECT DISTINCT s.* FROM students s`;
   const params: any[] = [];
-  const conditions: string[] = [];
+  const conditions: string[] = [`s.deleted_at IS NULL`];
 
   if (options.courseId) {
     sql += ` JOIN enrollments e ON s.id = e.student_id`;
     conditions.push(`e.course_id = ?`);
+    conditions.push(`e.deleted_at IS NULL`);
     params.push(options.courseId);
   }
 

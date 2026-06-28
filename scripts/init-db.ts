@@ -10,7 +10,8 @@ db.exec(`
     email TEXT NOT NULL UNIQUE,
     age INTEGER NOT NULL,
     department TEXT NOT NULL,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    deleted_at TEXT
   )
   `);
 
@@ -21,7 +22,8 @@ db.exec(`
     name TEXT NOT NULL,
     code TEXT NOT NULL UNIQUE,
     credits INTEGER NOT NULL,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    deleted_at TEXT
     )
     `);
 
@@ -32,6 +34,7 @@ db.exec(`
     student_id INTEGER NOT NULL,
     course_id INTEGER NOT NULL,
     enrollment_date TEXT NOT NULL,
+    deleted_at TEXT,
 
     FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
