@@ -77,7 +77,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile Top Nav */}
-      <header className="lg:hidden flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4 sticky top-0 z-40">
+      <header className="lg:hidden flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-4 sticky top-0 z-40">
         <Link href="/" className="flex items-center gap-2 hover:opacity-85 transition-opacity">
           <GraduationCap className="h-6 w-6 text-zinc-900 dark:text-white" />
           <span className="font-semibold text-zinc-900 dark:text-white">EduSuite</span>
@@ -103,7 +103,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="lg:hidden border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4 fixed left-0 right-0 z-30 shadow-lg"
+            className="lg:hidden border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-4 fixed left-0 right-0 top-[65px] z-30 shadow-lg"
           >
             <nav className="space-y-1">
               {navItems.map((item) => {
@@ -139,6 +139,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
+            className="overflow-hidden"
           >
             {children}
           </motion.div>

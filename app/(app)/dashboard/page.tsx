@@ -53,16 +53,16 @@ export default async function DashboardPage() {
               System Dashboard
             </h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
             <Link
               href="/courses"
-              className="inline-flex h-10 items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 text-sm font-medium text-zinc-650 dark:text-zinc-300 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white shadow-sm"
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 text-sm font-medium text-zinc-650 dark:text-zinc-300 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white shadow-sm w-full sm:w-auto"
             >
               Manage Courses
             </Link>
             <Link
               href="/students"
-              className="inline-flex h-10 items-center justify-center rounded-lg bg-zinc-950 hover:bg-zinc-900 dark:bg-white dark:hover:bg-zinc-100 px-4 text-sm font-medium text-white dark:text-zinc-950 transition-all shadow-md flex items-center gap-1.5"
+              className="inline-flex h-10 items-center justify-center rounded-lg bg-zinc-950 hover:bg-zinc-900 dark:bg-white dark:hover:bg-zinc-100 px-4 text-sm font-medium text-white dark:text-zinc-950 transition-all shadow-md flex items-center justify-center sm:justify-start gap-1.5 w-full sm:w-auto"
             >
               <span>Manage Students</span>
               <ArrowRight className="h-4 w-4" />

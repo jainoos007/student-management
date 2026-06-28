@@ -370,7 +370,7 @@ export default function StudentDetailPage() {
     .toUpperCase();
 
   return (
-    <main className="p-6 sm:p-8 lg:p-10 text-zinc-950 dark:text-zinc-50 min-h-screen">
+    <main className="p-4 sm:p-6 lg:p-10 text-zinc-950 dark:text-zinc-50 min-h-screen overflow-x-hidden">
       {/* Back button */}
       <div className="mb-6">
         <button
@@ -382,10 +382,10 @@ export default function StudentDetailPage() {
         </button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_2fr]">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_2fr] w-full min-w-0">
         
         {/* Left Side: Profile Detail Card */}
-        <section className="flex flex-col gap-6">
+        <section className="flex flex-col gap-6 w-full min-w-0">
           <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 p-6 shadow-sm flex flex-col items-center text-center relative overflow-hidden group">
             {/* HSL Gradient Bar */}
             <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-rose-500" />
@@ -437,25 +437,25 @@ export default function StudentDetailPage() {
               <Button
                 variant="outline"
                 onClick={() => setEditOpen(true)}
-                className="h-9 text-xs font-semibold border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                className="h-9 px-1.5 sm:px-3 text-xs font-semibold border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800"
               >
-                <Edit className="h-3.5 w-3.5 mr-1 text-zinc-450" />
+                <Edit className="h-3.5 w-3.5 mr-1 text-zinc-450 shrink-0" />
                 <span>Edit</span>
               </Button>
               <Button
                 variant="outline"
                 onClick={handlePrintTranscript}
-                className="h-9 text-xs font-semibold border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                className="h-9 px-1.5 sm:px-3 text-xs font-semibold border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800"
               >
-                <Printer className="h-3.5 w-3.5 mr-1 text-zinc-450" />
+                <Printer className="h-3.5 w-3.5 mr-1 text-zinc-450 shrink-0" />
                 <span>Print</span>
               </Button>
               <Button
                 variant="outline"
                 onClick={() => setDeleteOpen(true)}
-                className="h-9 text-xs font-semibold border-red-200 dark:border-red-950 text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/10 hover:text-red-700"
+                className="h-9 px-1.5 sm:px-3 text-xs font-semibold border-red-200 dark:border-red-950 text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/10 hover:text-red-700"
               >
-                <Trash2 className="h-3.5 w-3.5 mr-1 text-red-450" />
+                <Trash2 className="h-3.5 w-3.5 mr-1 text-red-450 shrink-0" />
                 <span>Delete</span>
               </Button>
             </div>
@@ -463,7 +463,7 @@ export default function StudentDetailPage() {
         </section>
 
         {/* Right Side: Course Enrollments and GPA Manager */}
-        <section className="flex flex-col gap-6">
+        <section className="flex flex-col gap-6 w-full min-w-0">
           <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 p-6 shadow-sm">
             
             {/* Title */}
@@ -482,8 +482,8 @@ export default function StudentDetailPage() {
                 </p>
               </div>
             ) : (
-              <div className="overflow-hidden border border-zinc-200/60 dark:border-zinc-800/60 rounded-lg mb-6">
-                <table className="w-full border-collapse text-left">
+              <div className="overflow-x-auto border border-zinc-200/60 dark:border-zinc-800/60 rounded-lg mb-6">
+                <table className="w-full min-w-[580px] border-collapse text-left">
                   <thead>
                     <tr className="bg-zinc-50/50 dark:bg-zinc-950/30 text-xs text-zinc-400 dark:text-zinc-500 font-bold border-b border-zinc-200/50 dark:border-zinc-800">
                       <th className="px-4 py-3 font-semibold">Course Code</th>
@@ -651,7 +651,7 @@ export default function StudentDetailPage() {
               </div>
             </div>
             
-            <DialogFooter className="pt-4 border-t border-zinc-100 dark:border-zinc-850 flex gap-2">
+            <DialogFooter className="pt-4 border-t border-zinc-100 dark:border-zinc-850 flex flex-col-reverse sm:flex-row gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -687,7 +687,7 @@ export default function StudentDetailPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <DialogFooter className="pt-4 border-t border-zinc-100 dark:border-zinc-850 flex gap-2">
+          <DialogFooter className="pt-4 border-t border-zinc-100 dark:border-zinc-850 flex flex-col-reverse sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"

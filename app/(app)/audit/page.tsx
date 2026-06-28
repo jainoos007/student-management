@@ -6,7 +6,6 @@ import {
   Download, 
   ChevronLeft, 
   ChevronRight, 
-  Activity, 
   RefreshCw,
   AlertCircle,
   X
@@ -191,27 +190,6 @@ export default function AuditTrailPage() {
             </h1>
           </div>
           
-          <div className="grid grid-cols-2 gap-3 sm:min-w-80">
-            <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 shadow-sm flex items-center justify-between">
-              <div>
-                <p className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 dark:text-zinc-500">Total Logs</p>
-                <p className="mt-0.5 text-2xl font-bold text-zinc-900 dark:text-white leading-none">{totalCount}</p>
-              </div>
-              <div className="h-8 w-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                <Activity className="h-4 w-4" />
-              </div>
-            </div>
-            
-            <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 shadow-sm flex items-center justify-between">
-              <div>
-                <p className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 dark:text-zinc-500">Filtered</p>
-                <p className="mt-0.5 text-2xl font-bold text-zinc-900 dark:text-white leading-none">{logs.length}</p>
-              </div>
-              <div className="h-8 w-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                <RefreshCw className="h-4 w-4" />
-              </div>
-            </div>
-          </div>
         </header>
 
         {/* Search and Filters horizontal bar (No Card wrapper) */}
