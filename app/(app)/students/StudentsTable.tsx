@@ -802,7 +802,12 @@ export function StudentsTable({
                   return (
                     <TableRow key={student.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10 transition-colors">
                       <TableCell className="px-6 py-4">
-                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">{student.name}</span>
+                        <Link
+                          href={`/students/${student.id}`}
+                          className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline transition-all"
+                        >
+                          {student.name}
+                        </Link>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-zinc-650 dark:text-zinc-450">
                         {student.email}
@@ -839,16 +844,13 @@ export function StudentsTable({
                             <Edit3 className="h-3.5 w-3.5 text-zinc-450" />
                             <span>Edit</span>
                           </Button>
-                          <Button
-                            variant="outline"
-                            className="h-8 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center gap-1"
-                            disabled={deletingId === student.id}
-                            type="button"
-                            onClick={() => openEnrollmentModal(student)}
+                          <Link
+                            href={`/students/${student.id}`}
+                            className="inline-flex h-8 items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center gap-1 shadow-sm"
                           >
                             <BookOpen className="h-3.5 w-3.5 text-zinc-450" />
-                            <span>Courses</span>
-                          </Button>
+                            <span>Details</span>
+                          </Link>
                           <Button
                             variant="outline"
                             className="h-8 border-red-200 dark:border-red-950 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-700 transition-all flex items-center gap-1"
@@ -940,152 +942,7 @@ export function StudentsTable({
       )}
 
       {/* Official Shadcn Dialog Overlay for Course Enrollment */}
-      <Dialog open={activeStudent !== null} onOpenChange={(open) => { if (!open) setActiveStudent(null) }}>
-        {activeStudent && (
-          <DialogContent className="sm:max-w-lg bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                <GraduationCap className="h-5 w-5 text-indigo-500" />
-                <span>Course Enrollment</span>
-              </DialogTitle>
-              <DialogDescription className="text-xs text-zinc-450 dark:text-zinc-500 font-medium">
-                Manage enrolled courses and transcripts for <strong className="text-zinc-900 dark:text-zinc-100 font-semibold">{activeStudent.name}</strong>.
-                {(() => {
-                  const totalCredits = studentCourses.reduce((sum, c) => sum + c.credits, 0);
-                  const gradePoints: Record<string, number> = { A: 4, B: 3, C: 2, D: 1, F: 0 };
-                  let totalPoints = 0;
-                  let gradedCredits = 0;
-                  studentCourses.forEach(c => {
-                    if (c.grade && c.grade.toUpperCase() in gradePoints) {
-                      totalPoints += gradePoints[c.grade.toUpperCase()] * c.credits;
-                      gradedCredits += c.credits;
-                    }
-                  });
-                  const gpa = gradedCredits > 0 ? (totalPoints / gradedCredits).toFixed(2) : "N/A";
-                  return (
-                    <span className="block mt-1 font-semibold text-zinc-500 dark:text-zinc-400">
-                      Total Credits: {totalCredits} &nbsp;&bull;&nbsp; Cumulative GPA: <span className="text-zinc-900 dark:text-white font-bold">{gpa}</span>
-                    </span>
-                  );
-                })()}
-              </DialogDescription>
-            </DialogHeader>
-
-            {modalError && (
-              <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20 px-3.5 py-2.5 text-xs text-red-700 dark:text-red-400 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <span>{modalError}</span>
-              </div>
-            )}
-
-            {/* Enrolled Courses Block */}
-            <div className="mt-4">
-              <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-2 mb-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Enrolled Courses ({studentCourses.length})</h3>
-                {studentCourses.length > 0 && (
-                  <Button
-                    variant="outline"
-                    onClick={printTranscript}
-                    className="h-8 px-2.5 text-xs font-semibold flex items-center gap-1 shadow-sm bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
-                  >
-                    <Printer className="h-3.5 w-3.5" />
-                    <span>Print Transcript</span>
-                  </Button>
-                )}
-              </div>
-
-              {modalLoading ? (
-                <p className="text-xs text-zinc-450 dark:text-zinc-500 italic py-3 flex items-center gap-1.5 justify-center">
-                  <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
-                  <span>Loading student records...</span>
-                </p>
-              ) : studentCourses.length === 0 ? (
-                <p className="text-xs text-zinc-450 dark:text-zinc-500 italic py-6 text-center">
-                  This student is not enrolled in any courses yet.
-                </p>
-              ) : (
-                <ul className="divide-y divide-zinc-100 dark:divide-zinc-800/80 max-h-48 overflow-y-auto border border-zinc-200/60 dark:border-zinc-800/60 rounded-lg bg-zinc-50/20 dark:bg-zinc-950/20">
-                  {studentCourses.map((course) => (
-                    <li key={course.id} className="flex items-center justify-between px-3 py-2 text-xs gap-3">
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <span className="font-semibold text-zinc-850 dark:text-zinc-150 truncate">{course.name}</span>
-                        <span className="font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-550 dark:text-zinc-400 text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0">{course.code}</span>
-                        <span className="text-[10px] text-zinc-400 shrink-0">{course.credits} cr</span>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {/* Grade Dropdown Selector */}
-                        <select
-                          value={course.grade || "IP"}
-                          onChange={(e) => handleUpdateGrade(course.enrollment_id, e.target.value)}
-                          className="h-7 rounded border border-zinc-250 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-[10px] font-bold px-1.5 py-0.5 text-zinc-700 dark:text-zinc-300 outline-none"
-                        >
-                          <option value="IP">In Progress</option>
-                          <option value="A">Grade: A</option>
-                          <option value="B">Grade: B</option>
-                          <option value="C">Grade: C</option>
-                          <option value="D">Grade: D</option>
-                          <option value="F">Grade: F</option>
-                        </select>
-
-                        <Button
-                          variant="ghost"
-                          onClick={() => requestUnenroll(course.enrollment_id, course.name)}
-                          className="h-7 text-[10px] font-bold text-red-650 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            {/* Add Enrollment Block */}
-            {!modalLoading && (
-              <form onSubmit={enrollInCourse} className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-2">Enroll in a new course</h3>
-                {availableCourses.length === 0 ? (
-                  <p className="text-xs text-zinc-400 dark:text-zinc-500 italic py-2">
-                    Student is already enrolled in all catalog courses.
-                  </p>
-                ) : (
-                  <div className="flex gap-2 items-end">
-                    <div className="flex-1">
-                      <Select value={selectedCourseId} onValueChange={(val) => setSelectedCourseId(val ?? "")}>
-                        <SelectTrigger className="w-full h-10 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200">
-                          <SelectValue placeholder="Select course...">
-                            {selectedCourseId && availableCourses.find((c) => String(c.id) === selectedCourseId)
-                              ? (() => {
-                                  const c = availableCourses.find((c) => String(c.id) === selectedCourseId)!;
-                                  return `${c.code} - ${c.name} (${c.credits} Credits)`;
-                                })()
-                              : "Select course..."}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent alignItemWithTrigger={false} side="bottom" align="start" className="min-w-[--anchor-width]! w-max!">
-                          {availableCourses.map((course) => (
-                             <SelectItem key={course.id} value={String(course.id)}>
-                               {course.code} - {course.name} ({course.credits} Credits)
-                             </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button
-                      type="submit"
-                      disabled={!selectedCourseId}
-                      className="h-10 bg-zinc-950 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100 px-4 text-xs font-semibold shadow-sm"
-                    >
-                      Enroll
-                    </Button>
-                  </div>
-                )}
-              </form>
-            )}
-          </DialogContent>
-        )}
-      </Dialog>
+      {/* Course enrollment dialog replaced by student detail page */}
 
       {/* Edit Student Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={(val) => {

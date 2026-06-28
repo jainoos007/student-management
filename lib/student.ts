@@ -418,3 +418,40 @@ export function getAverageGPA(): number {
     return 0;
   }
 }
+
+export function getStudent(id: number): Student | null {
+  const db = getDb();
+  try {
+    const student = db
+      .prepare(`
+        SELECT s.*, 
+          (
+            SELECT SUM(
+              CASE UPPER(e.grade)
+                WHEN 'A' THEN 4.0
+                WHEN 'B' THEN 3.0
+                WHEN 'C' THEN 2.0
+                WHEN 'D' THEN 1.0
+                WHEN 'F' THEN 0.0
+                ELSE 0.0
+              END * c.credits
+            ) / CAST(SUM(c.credits) AS REAL)
+            FROM enrollments e
+            JOIN courses c ON e.course_id = c.id
+            WHERE e.student_id = s.id 
+              AND e.grade IS NOT NULL 
+              AND e.grade != '' 
+              AND e.deleted_at IS NULL 
+              AND c.deleted_at IS NULL
+          ) as gpa
+        FROM students s
+        WHERE s.id = ? AND s.deleted_at IS NULL
+      `)
+      .get(id) as Student | undefined;
+    return student ?? null;
+  } catch (err) {
+    console.error("Failed to fetch student by id:", err);
+    return null;
+  }
+}
+

@@ -71,7 +71,7 @@ export default async function DashboardPage() {
         </header>
 
         {/* Stats Grid */}
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {/* Card 1 */}
           <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-5 shadow-sm hover:shadow-md dark:hover:border-zinc-700 transition-all duration-200 flex flex-col justify-between min-h-32 relative overflow-hidden group">
             <div className="flex items-start justify-between">
@@ -86,23 +86,7 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Card 2 */}
-          <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-5 shadow-sm hover:shadow-md dark:hover:border-zinc-700 transition-all duration-200 flex flex-col justify-between min-h-32 relative overflow-hidden group">
-            <div className="flex items-start justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Average Age</span>
-              <div className="h-8 w-8 rounded-lg bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center">
-                <CalendarDays className="h-4 w-4" />
-              </div>
-            </div>
-            <div>
-              <p className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mt-4">
-                {totalStudents === 0 ? "N/A" : averageAge.toFixed(1)}
-              </p>
-              <div className="absolute bottom-0 inset-x-0 h-1 bg-orange-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-350" />
-            </div>
-          </div>
-
-          {/* Card 3 */}
+          {/* Card 2 (Formerly Card 3): Departments */}
           <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-5 shadow-sm hover:shadow-md dark:hover:border-zinc-700 transition-all duration-200 flex flex-col justify-between min-h-32 relative overflow-hidden group">
             <div className="flex items-start justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Departments</span>
@@ -116,7 +100,7 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Card 4 */}
+          {/* Card 3 (Formerly Card 4): Total Courses */}
           <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-5 shadow-sm hover:shadow-md dark:hover:border-zinc-700 transition-all duration-200 flex flex-col justify-between min-h-32 relative overflow-hidden group">
             <div className="flex items-start justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Total Courses</span>
@@ -130,7 +114,7 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Card 5 */}
+          {/* Card 4 (Formerly Card 5): Avg Enrollments */}
           <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-5 shadow-sm hover:shadow-md dark:hover:border-zinc-700 transition-all duration-200 flex flex-col justify-between min-h-32 relative overflow-hidden group">
             <div className="flex items-start justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Avg Enrollments</span>
@@ -146,7 +130,7 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Card 6 */}
+          {/* Card 5 (Formerly Card 6): Average GPA */}
           <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-5 shadow-sm hover:shadow-md dark:hover:border-zinc-700 transition-all duration-200 flex flex-col justify-between min-h-32 relative overflow-hidden group">
             <div className="flex items-start justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Average GPA</span>

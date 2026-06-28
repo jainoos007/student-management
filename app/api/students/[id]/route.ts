@@ -1,7 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateStudent, deleteStudent } from "@/lib/student";
-
+import { updateStudent, deleteStudent, getStudent } from "@/lib/student";
 import { StudentUpdateSchema } from "@/lib/schemas";
+
+export async function GET(
+  _request: NextRequest,
+  ctx: { params: Promise<{ id: string }> },
+) {
+  const { id } = await ctx.params;
+  const student = getStudent(Number(id));
+
+  if (!student) {
+    return NextResponse.json(
+      { message: "Student not found" },
+      { status: 404 }
+    );
+  }
+
+  return NextResponse.json(student);
+}
 
 export async function PUT(
   request: NextRequest,
