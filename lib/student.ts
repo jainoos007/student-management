@@ -11,7 +11,32 @@ export function getStudents(page: number = 1, limit: number = 10): Student[] {
   const offset = (page - 1) * limit;
   const db = getDb();
   return db
-    .prepare(`SELECT * FROM students WHERE deleted_at IS NULL ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`)
+    .prepare(`
+      SELECT s.*, 
+        (
+          SELECT SUM(
+            CASE UPPER(e.grade)
+              WHEN 'A' THEN 4.0
+              WHEN 'B' THEN 3.0
+              WHEN 'C' THEN 2.0
+              WHEN 'D' THEN 1.0
+              WHEN 'F' THEN 0.0
+              ELSE 0.0
+            END * c.credits
+          ) / CAST(SUM(c.credits) AS REAL)
+          FROM enrollments e
+          JOIN courses c ON e.course_id = c.id
+          WHERE e.student_id = s.id 
+            AND e.grade IS NOT NULL 
+            AND e.grade != '' 
+            AND e.deleted_at IS NULL 
+            AND c.deleted_at IS NULL
+        ) as gpa
+      FROM students s
+      WHERE s.deleted_at IS NULL 
+      ORDER BY s.created_at DESC, s.id DESC 
+      LIMIT ? OFFSET ?
+    `)
     .all(limit, offset) as Student[];
 }
 
@@ -101,8 +126,28 @@ export function searchStudents(query: string): Student[] {
   return db
     .prepare(
       `
-    SELECT * FROM students
-    WHERE deleted_at IS NULL AND (name LIKE ? OR email LIKE ? OR department LIKE ?)`,
+    SELECT s.*, 
+      (
+        SELECT SUM(
+          CASE UPPER(e.grade)
+            WHEN 'A' THEN 4.0
+            WHEN 'B' THEN 3.0
+            WHEN 'C' THEN 2.0
+            WHEN 'D' THEN 1.0
+            WHEN 'F' THEN 0.0
+            ELSE 0.0
+          END * c.credits
+        ) / CAST(SUM(c.credits) AS REAL)
+        FROM enrollments e
+        JOIN courses c ON e.course_id = c.id
+        WHERE e.student_id = s.id 
+          AND e.grade IS NOT NULL 
+          AND e.grade != '' 
+          AND e.deleted_at IS NULL 
+          AND c.deleted_at IS NULL
+      ) as gpa
+    FROM students s
+    WHERE s.deleted_at IS NULL AND (s.name LIKE ? OR s.email LIKE ? OR s.department LIKE ?)`,
     )
     .all(`%${query}%`, `%${query}%`, `%${query}%`) as Student[];
 }
@@ -128,9 +173,29 @@ export function getOldestStudent(): Student | null {
   const result = db
     .prepare(
       `
-    SELECT * FROM students
-    WHERE deleted_at IS NULL
-    ORDER BY age DESC
+    SELECT s.*,
+      (
+        SELECT SUM(
+          CASE UPPER(e.grade)
+            WHEN 'A' THEN 4.0
+            WHEN 'B' THEN 3.0
+            WHEN 'C' THEN 2.0
+            WHEN 'D' THEN 1.0
+            WHEN 'F' THEN 0.0
+            ELSE 0.0
+          END * c.credits
+        ) / CAST(SUM(c.credits) AS REAL)
+        FROM enrollments e
+        JOIN courses c ON e.course_id = c.id
+        WHERE e.student_id = s.id 
+          AND e.grade IS NOT NULL 
+          AND e.grade != '' 
+          AND e.deleted_at IS NULL 
+          AND c.deleted_at IS NULL
+      ) as gpa
+    FROM students s
+    WHERE s.deleted_at IS NULL
+    ORDER BY s.age DESC
     LIMIT 1
     `,
     )
@@ -163,7 +228,27 @@ export function getStudentsByCourse(
   return db
     .prepare(
       `
-      SELECT s.* FROM students s
+      SELECT s.*,
+        (
+          SELECT SUM(
+            CASE UPPER(e.grade)
+              WHEN 'A' THEN 4.0
+              WHEN 'B' THEN 3.0
+              WHEN 'C' THEN 2.0
+              WHEN 'D' THEN 1.0
+              WHEN 'F' THEN 0.0
+              ELSE 0.0
+            END * c.credits
+          ) / CAST(SUM(c.credits) AS REAL)
+          FROM enrollments e
+          JOIN courses c ON e.course_id = c.id
+          WHERE e.student_id = s.id 
+            AND e.grade IS NOT NULL 
+            AND e.grade != '' 
+            AND e.deleted_at IS NULL 
+            AND c.deleted_at IS NULL
+        ) as gpa
+      FROM students s
       JOIN enrollments e ON s.id = e.student_id
       WHERE e.course_id = ? AND s.deleted_at IS NULL AND e.deleted_at IS NULL
       LIMIT ? OFFSET ?
@@ -194,7 +279,31 @@ export function getStudentsByDepartment(
   const offset = (page - 1) * limit;
   const db = getDb();
   return db
-    .prepare(`SELECT * FROM students WHERE department = ? AND deleted_at IS NULL LIMIT ? OFFSET ?`)
+    .prepare(`
+      SELECT s.*,
+        (
+          SELECT SUM(
+            CASE UPPER(e.grade)
+              WHEN 'A' THEN 4.0
+              WHEN 'B' THEN 3.0
+              WHEN 'C' THEN 2.0
+              WHEN 'D' THEN 1.0
+              WHEN 'F' THEN 0.0
+              ELSE 0.0
+            END * c.credits
+          ) / CAST(SUM(c.credits) AS REAL)
+          FROM enrollments e
+          JOIN courses c ON e.course_id = c.id
+          WHERE e.student_id = s.id 
+            AND e.grade IS NOT NULL 
+            AND e.grade != '' 
+            AND e.deleted_at IS NULL 
+            AND c.deleted_at IS NULL
+        ) as gpa
+      FROM students s 
+      WHERE s.department = ? AND s.deleted_at IS NULL 
+      LIMIT ? OFFSET ?
+    `)
     .all(department, limit, offset) as Student[];
 }
 
@@ -219,7 +328,30 @@ export function queryStudents(options: {
 
   const db = getDb();
 
-  let sql = `SELECT DISTINCT s.* FROM students s`;
+  let sql = `
+    SELECT DISTINCT s.*,
+      (
+        SELECT SUM(
+          CASE UPPER(e.grade)
+            WHEN 'A' THEN 4.0
+            WHEN 'B' THEN 3.0
+            WHEN 'C' THEN 2.0
+            WHEN 'D' THEN 1.0
+            WHEN 'F' THEN 0.0
+            ELSE 0.0
+          END * c.credits
+        ) / CAST(SUM(c.credits) AS REAL)
+        FROM enrollments e
+        JOIN courses c ON e.course_id = c.id
+        WHERE e.student_id = s.id 
+          AND e.grade IS NOT NULL 
+          AND e.grade != '' 
+          AND e.deleted_at IS NULL 
+          AND c.deleted_at IS NULL
+      ) as gpa
+    FROM students s
+  `;
+  
   const params: any[] = [];
   const conditions: string[] = [`s.deleted_at IS NULL`];
 
@@ -249,4 +381,40 @@ export function queryStudents(options: {
   params.push(limit, offset);
 
   return db.prepare(sql).all(...params) as Student[];
+}
+
+export function getAverageGPA(): number {
+  const db = getDb();
+  try {
+    const result = db.prepare(`
+      SELECT AVG(gpa) as avg_gpa FROM (
+        SELECT 
+          (
+            SELECT SUM(
+              CASE UPPER(e.grade)
+                WHEN 'A' THEN 4.0
+                WHEN 'B' THEN 3.0
+                WHEN 'C' THEN 2.0
+                WHEN 'D' THEN 1.0
+                WHEN 'F' THEN 0.0
+                ELSE 0.0
+              END * c.credits
+            ) / CAST(SUM(c.credits) AS REAL)
+            FROM enrollments e
+            JOIN courses c ON e.course_id = c.id
+            WHERE e.student_id = s.id 
+              AND e.grade IS NOT NULL 
+              AND e.grade != '' 
+              AND e.deleted_at IS NULL 
+              AND c.deleted_at IS NULL
+          ) as gpa
+        FROM students s
+        WHERE s.deleted_at IS NULL
+      ) WHERE gpa IS NOT NULL
+    `).get() as { avg_gpa: number | null };
+    return result.avg_gpa ?? 0;
+  } catch (err) {
+    console.error("Failed to query average GPA:", err);
+    return 0;
+  }
 }

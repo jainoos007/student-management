@@ -15,7 +15,7 @@ export default function DashboardAuditFeed() {
       const response = await fetch("/api/audit");
       if (response.ok) {
         const data = await response.json();
-        setLogs(data);
+        setLogs(Array.isArray(data) ? data : (data.logs || []));
       }
     } catch (err) {
       console.error("Could not fetch audit logs:", err);

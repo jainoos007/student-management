@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { LayoutDashboard, Users, BookOpen, Menu, X, GraduationCap } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, Menu, X, GraduationCap, Activity } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/students", label: "Students", icon: Users },
   { href: "/courses", label: "Courses", icon: BookOpen },
+  { href: "/audit", label: "Audit Logs", icon: Activity },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

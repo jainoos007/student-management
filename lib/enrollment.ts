@@ -91,3 +91,38 @@ export function getEnrollmentTrends(): { date: string; count: number }[] {
     return [];
   }
 }
+
+export function updateEnrollmentGrade(id: number, grade: string | null) {
+  const db = getDb();
+  
+  // Make sure the grade is in uppercase or null
+  const formattedGrade = grade && grade.trim() !== "" ? grade.trim().toUpperCase() : null;
+  
+  // Validate grade
+  if (formattedGrade && !["A", "B", "C", "D", "F"].includes(formattedGrade)) {
+    throw new Error("Invalid grade format. Grade must be A, B, C, D, F, or empty.");
+  }
+
+  const enrollment = db.prepare("SELECT * FROM enrollments WHERE id = ?").get(id) as Enrollment | undefined;
+  if (!enrollment) {
+    throw new Error("Enrollment record not found.");
+  }
+  
+  const student = db.prepare("SELECT name FROM students WHERE id = ?").get(enrollment.student_id) as { name: string } | undefined;
+  const course = db.prepare("SELECT name, code FROM courses WHERE id = ?").get(enrollment.course_id) as { name: string, code: string } | undefined;
+
+  const result = db.prepare("UPDATE enrollments SET grade = ? WHERE id = ?").run(formattedGrade, id);
+  
+  if (result.changes > 0 && student && course) {
+    const logStr = formattedGrade ? `to grade "${formattedGrade}"` : "to (in progress)";
+    addAuditLog(
+      "UPDATE_GRADE",
+      "ENROLLMENT",
+      id,
+      `Updated course grade for ${student.name} in ${course.name} [${course.code}] ${logStr}.`,
+      new Date().toISOString()
+    );
+  }
+  return result;
+}
+

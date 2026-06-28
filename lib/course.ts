@@ -87,12 +87,12 @@ export function getStudentCourses(studentId: number) {
   return db
     .prepare(
       `
-     SELECT c.*, e.id as enrollment_id FROM courses c
+     SELECT c.*, e.id as enrollment_id, e.grade FROM courses c
      JOIN enrollments e ON c.id = e.course_id
      WHERE e.student_id = ? AND c.deleted_at IS NULL AND e.deleted_at IS NULL
     `,
     )
-    .all(studentId) as (Course & { enrollment_id: number })[];
+    .all(studentId) as (Course & { enrollment_id: number; grade?: string | null })[];
 }
 
 export function searchCourses(query: string): Course[] {

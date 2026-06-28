@@ -35,6 +35,7 @@ db.exec(`
     course_id INTEGER NOT NULL,
     enrollment_date TEXT NOT NULL,
     deleted_at TEXT,
+    grade TEXT,
 
     FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,

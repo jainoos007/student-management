@@ -5,6 +5,7 @@ import {
   getDepartmentStats,
   getOldestStudent,
   getTotalStudents,
+  getAverageGPA,
 } from "@/lib/student";
 import { getTotalCourses, getAverageEnrollmentsPerStudent, getPopularCourses } from "@/lib/course";
 import { getEnrollmentTrends } from "@/lib/enrollment";
@@ -36,6 +37,7 @@ export default async function DashboardPage() {
   const averageEnrollments = getAverageEnrollmentsPerStudent();
   const popularCourses = getPopularCourses(5);
   const enrollmentTrends = getEnrollmentTrends();
+  const averageGPA = getAverageGPA();
 
   return (
     <main className="p-6 sm:p-8 lg:p-10 text-zinc-950 dark:text-zinc-50 min-h-screen">
@@ -69,7 +71,7 @@ export default async function DashboardPage() {
         </header>
 
         {/* Stats Grid */}
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {/* Card 1 */}
           <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-5 shadow-sm hover:shadow-md dark:hover:border-zinc-700 transition-all duration-200 flex flex-col justify-between min-h-32 relative overflow-hidden group">
             <div className="flex items-start justify-between">
@@ -141,6 +143,22 @@ export default async function DashboardPage() {
                 {totalStudents === 0 ? "N/A" : averageEnrollments.toFixed(1)}
               </p>
               <div className="absolute bottom-0 inset-x-0 h-1 bg-blue-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-350" />
+            </div>
+          </div>
+
+          {/* Card 6 */}
+          <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-5 shadow-sm hover:shadow-md dark:hover:border-zinc-700 transition-all duration-200 flex flex-col justify-between min-h-32 relative overflow-hidden group">
+            <div className="flex items-start justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Average GPA</span>
+              <div className="h-8 w-8 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                <Award className="h-4 w-4" />
+              </div>
+            </div>
+            <div>
+              <p className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mt-4">
+                {totalStudents === 0 ? "N/A" : averageGPA.toFixed(2)}
+              </p>
+              <div className="absolute bottom-0 inset-x-0 h-1 bg-rose-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-350" />
             </div>
           </div>
         </section>

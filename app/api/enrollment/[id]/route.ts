@@ -1,4 +1,4 @@
-import { deleteEnrollment, updateEnrollment } from "@/lib/enrollment";
+import { deleteEnrollment, updateEnrollment, updateEnrollmentGrade } from "@/lib/enrollment";
 import { NextResponse } from "next/server";
 
 export async function PUT(
@@ -66,6 +66,28 @@ export async function DELETE(
         message: "Error deleting enrollment",
       },
       { status: 500 },
+    );
+  }
+}
+
+export async function PATCH(
+  request: Request,
+  ctx: { params: Promise<{ id: string }> },
+) {
+  const { id } = await ctx.params;
+  const body = await request.json();
+  const { grade } = body;
+
+  try {
+    updateEnrollmentGrade(Number(id), grade);
+    return NextResponse.json(
+      { message: "Grade updated successfully" },
+      { status: 200 }
+    );
+  } catch (err: any) {
+    return NextResponse.json(
+      { message: err.message || "Error updating grade" },
+      { status: 500 }
     );
   }
 }

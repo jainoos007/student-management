@@ -5,4 +5,5 @@ export interface Student {
   age: number;
   department: string;
   created_at: string;
+  gpa?: number | null;
 }

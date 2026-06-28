@@ -82,7 +82,7 @@ export function StudentsTable({
   const [searchResults, setSearchResults] = useState<Student[] | null>(null);
   
   const [activeStudent, setActiveStudent] = useState<Student | null>(null);
-  const [studentCourses, setStudentCourses] = useState<(Course & { enrollment_id: number })[]>([]);
+  const [studentCourses, setStudentCourses] = useState<(Course & { enrollment_id: number; grade?: string | null })[]>([]);
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
   const [modalLoading, setModalLoading] = useState(false);
@@ -243,6 +243,24 @@ export function StudentsTable({
 
     const totalCredits = studentCourses.reduce((sum, c) => sum + c.credits, 0);
 
+    const gradePoints: Record<string, number> = {
+      "A": 4.0,
+      "B": 3.0,
+      "C": 2.0,
+      "D": 1.0,
+      "F": 0.0
+    };
+
+    let totalPoints = 0;
+    let gradedCredits = 0;
+    for (const c of studentCourses) {
+      if (c.grade && c.grade.toUpperCase() in gradePoints) {
+        totalPoints += gradePoints[c.grade.toUpperCase()] * c.credits;
+        gradedCredits += c.credits;
+      }
+    }
+    const studentGpa = gradedCredits > 0 ? (totalPoints / gradedCredits).toFixed(2) : "N/A";
+
     const html = `
       <html>
         <head>
@@ -275,9 +293,10 @@ export function StudentsTable({
             <table>
               <thead>
                 <tr>
-                  <th style="width: 25%;">Course Code</th>
-                  <th style="width: 55%;">Course Name</th>
-                  <th style="width: 20%;">Credits</th>
+                  <th style="width: 20%;">Course Code</th>
+                  <th style="width: 45%;">Course Name</th>
+                  <th style="width: 15%;">Credits</th>
+                  <th style="width: 20%;">Grade</th>
                 </tr>
               </thead>
               <tbody>
@@ -286,13 +305,16 @@ export function StudentsTable({
                     <td><strong>${course.code}</strong></td>
                     <td>${course.name}</td>
                     <td>${course.credits}</td>
+                    <td>${course.grade ? course.grade.toUpperCase() : `<span style="color: #71717a; font-style: italic;">In Progress</span>`}</td>
                   </tr>
                 `).join("")}
               </tbody>
             </table>
           `}
           <div class="summary">
-            Total Courses: ${studentCourses.length} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Total Credits: ${totalCredits}
+            Total Courses: ${studentCourses.length} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+            Total Credits: ${totalCredits} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+            Cumulative GPA: ${studentGpa}
           </div>
           <script>
             window.onload = function() { window.print(); window.close(); }
@@ -302,6 +324,38 @@ export function StudentsTable({
     `;
     printWindow.document.write(html);
     printWindow.document.close();
+  }
+
+  async function handleUpdateGrade(enrollmentId: number, grade: string) {
+    try {
+      const response = await fetch(`/api/enrollment/${enrollmentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ grade: grade === "IP" ? null : grade }),
+      });
+      
+      if (!response.ok) {
+        throw new Error("Could not update grade");
+      }
+      
+      toast.success("Grade updated successfully");
+      
+      // Update studentCourses state so GPA updates immediately in UI
+      setStudentCourses((prev) =>
+        prev.map((c) =>
+          c.enrollment_id === enrollmentId
+            ? { ...c, grade: grade === "IP" ? null : grade }
+            : c
+        )
+      );
+
+      // Re-trigger router refresh so other lists reflect GPA
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update grade");
+    }
   }
 
   async function enrollInCourse(e: FormEvent) {
@@ -722,6 +776,7 @@ export function StudentsTable({
                     </div>
                   </TableHead>
                   <TableHead className="px-6 py-3.5">Department</TableHead>
+                  <TableHead className="px-6 py-3.5">GPA</TableHead>
                   <TableHead
                     onClick={() => handleSort("created_at")}
                     className="px-6 py-3.5 cursor-pointer select-none hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white transition-colors"
@@ -759,6 +814,15 @@ export function StudentsTable({
                         <Badge variant="outline" className="border-zinc-200/50 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 font-semibold px-2.5 py-1">
                           {student.department}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
+                        {student.gpa !== undefined && student.gpa !== null ? (
+                          <Badge variant="outline" className="bg-emerald-50/60 text-emerald-700 border-emerald-250 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/40 font-bold px-2 py-0.5">
+                            {student.gpa.toFixed(2)}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-zinc-400 font-medium italic">N/A</span>
+                        )}
                       </TableCell>
                       <TableCell className="px-6 py-4 text-xs text-zinc-400 dark:text-zinc-500 font-medium">
                         {new Date(student.created_at).toLocaleDateString()}
@@ -884,8 +948,26 @@ export function StudentsTable({
                 <GraduationCap className="h-5 w-5 text-indigo-500" />
                 <span>Course Enrollment</span>
               </DialogTitle>
-              <DialogDescription className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">
-                Manage enrolled courses and transcripts for <strong className="text-zinc-900 dark:text-zinc-100 font-semibold">{activeStudent.name}</strong>
+              <DialogDescription className="text-xs text-zinc-450 dark:text-zinc-500 font-medium">
+                Manage enrolled courses and transcripts for <strong className="text-zinc-900 dark:text-zinc-100 font-semibold">{activeStudent.name}</strong>.
+                {(() => {
+                  const totalCredits = studentCourses.reduce((sum, c) => sum + c.credits, 0);
+                  const gradePoints: Record<string, number> = { A: 4, B: 3, C: 2, D: 1, F: 0 };
+                  let totalPoints = 0;
+                  let gradedCredits = 0;
+                  studentCourses.forEach(c => {
+                    if (c.grade && c.grade.toUpperCase() in gradePoints) {
+                      totalPoints += gradePoints[c.grade.toUpperCase()] * c.credits;
+                      gradedCredits += c.credits;
+                    }
+                  });
+                  const gpa = gradedCredits > 0 ? (totalPoints / gradedCredits).toFixed(2) : "N/A";
+                  return (
+                    <span className="block mt-1 font-semibold text-zinc-500 dark:text-zinc-400">
+                      Total Credits: {totalCredits} &nbsp;&bull;&nbsp; Cumulative GPA: <span className="text-zinc-900 dark:text-white font-bold">{gpa}</span>
+                    </span>
+                  );
+                })()}
               </DialogDescription>
             </DialogHeader>
 
@@ -924,19 +1006,35 @@ export function StudentsTable({
               ) : (
                 <ul className="divide-y divide-zinc-100 dark:divide-zinc-800/80 max-h-48 overflow-y-auto border border-zinc-200/60 dark:border-zinc-800/60 rounded-lg bg-zinc-50/20 dark:bg-zinc-950/20">
                   {studentCourses.map((course) => (
-                    <li key={course.id} className="flex items-center justify-between px-3 py-2.5 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-zinc-850 dark:text-zinc-150">{course.name}</span>
-                        <span className="font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-550 dark:text-zinc-400 text-[9px] px-1.5 py-0.5 rounded font-bold">{course.code}</span>
-                        <span className="text-[10px] text-zinc-400">{course.credits} cr</span>
+                    <li key={course.id} className="flex items-center justify-between px-3 py-2 text-xs gap-3">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="font-semibold text-zinc-850 dark:text-zinc-150 truncate">{course.name}</span>
+                        <span className="font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-550 dark:text-zinc-400 text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0">{course.code}</span>
+                        <span className="text-[10px] text-zinc-400 shrink-0">{course.credits} cr</span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        onClick={() => requestUnenroll(course.enrollment_id, course.name)}
-                        className="h-7 text-[10px] font-bold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-0 bg-transparent hover:bg-transparent"
-                      >
-                        Remove
-                      </Button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Grade Dropdown Selector */}
+                        <select
+                          value={course.grade || "IP"}
+                          onChange={(e) => handleUpdateGrade(course.enrollment_id, e.target.value)}
+                          className="h-7 rounded border border-zinc-250 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-[10px] font-bold px-1.5 py-0.5 text-zinc-700 dark:text-zinc-300 outline-none"
+                        >
+                          <option value="IP">In Progress</option>
+                          <option value="A">Grade: A</option>
+                          <option value="B">Grade: B</option>
+                          <option value="C">Grade: C</option>
+                          <option value="D">Grade: D</option>
+                          <option value="F">Grade: F</option>
+                        </select>
+
+                        <Button
+                          variant="ghost"
+                          onClick={() => requestUnenroll(course.enrollment_id, course.name)}
+                          className="h-7 text-[10px] font-bold text-red-650 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                        >
+                          Remove
+                        </Button>
+                      </div>
                     </li>
                   ))}
                 </ul>

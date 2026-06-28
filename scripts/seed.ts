@@ -137,8 +137,10 @@ console.log("50 students inserted!");
 
 // Seed Enrollments (enrolled between their student creation date and now)
 const enrollmentStmt = db.prepare(`
-  INSERT INTO enrollments (student_id, course_id, enrollment_date) VALUES (?, ?, ?)
+  INSERT INTO enrollments (student_id, course_id, enrollment_date, grade) VALUES (?, ?, ?, ?)
 `);
+
+const gradesPool = ["A", "B", "C", "D", "F", null];
 
 let enrollmentCount = 0;
 for (const student of students) {
@@ -153,7 +155,12 @@ for (const student of students) {
     const enrollmentDate = getRandomDateBetween(startDate, NOW);
     const enrollmentDateStr = enrollmentDate.toISOString();
 
-    const result = enrollmentStmt.run(student.id, course.id, enrollmentDateStr);
+    // 80% chance of having a grade, 20% chance of being null (In Progress)
+    const grade = Math.random() < 0.8 
+      ? gradesPool[Math.floor(Math.random() * 5)] // A, B, C, D, F
+      : null;
+
+    const result = enrollmentStmt.run(student.id, course.id, enrollmentDateStr, grade);
     const enrollmentId = Number(result.lastInsertRowid);
     enrollmentCount++;
 
@@ -161,11 +168,12 @@ for (const student of students) {
     const courseCode = coursesList.find((_, index) => courses[index].id === course.id)?.code || "COURSE";
     const courseName = coursesList.find((_, index) => courses[index].id === course.id)?.name || "Course";
 
+    const gradeLogStr = grade ? `with grade "${grade}"` : "(in progress)";
     auditStmt.run(
       "ENROLL_STUDENT",
       "ENROLLMENT",
       enrollmentId,
-      `Enrolled student ${student.name} in course ${courseName} [${courseCode}].`,
+      `Enrolled student ${student.name} in course ${courseName} [${courseCode}] ${gradeLogStr}.`,
       enrollmentDateStr
     );
   }
