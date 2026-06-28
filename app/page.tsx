@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { getStudents } from "@/lib/student";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { HomeHeader } from "@/components/HomeHeader";
 import { 
   GraduationCap, 
   LayoutDashboard, 
@@ -29,30 +29,8 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 transition-colors duration-300 flex flex-col">
-      {/* Top Navbar */}
-      <header className="border-b border-zinc-200/50 dark:border-zinc-800/50 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md sticky top-0 z-50 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <GraduationCap className="h-6 w-6 text-zinc-900 dark:text-white" />
-            <span className="font-bold text-lg tracking-tight text-zinc-900 dark:text-white select-none">EduSuite</span>
-          </div>
-          <nav className="flex items-center gap-6 text-sm font-medium text-zinc-550 dark:text-zinc-400">
-            <Link href="/dashboard" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Overview</Link>
-            <Link href="/students" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Students</Link>
-            <Link href="/courses" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Courses</Link>
-          </nav>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <Link
-              href="/dashboard"
-              className="inline-flex h-9 items-center justify-center rounded-lg bg-zinc-950 hover:bg-zinc-900 dark:bg-white dark:hover:bg-zinc-100 px-4 text-xs font-semibold text-white dark:text-zinc-950 transition-all shadow-sm flex items-center gap-1"
-            >
-              <span>Launch App</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        </div>
-      </header>
+      {/* Client-side responsive header navigation */}
+      <HomeHeader />
 
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-20 pb-16 px-6 text-center">
