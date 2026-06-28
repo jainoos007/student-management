@@ -66,3 +66,21 @@ export function deleteEnrollment(id: number) {
   return result;
 }
 
+export function getEnrollmentTrends(): { date: string; count: number }[] {
+  const db = getDb();
+  try {
+    return db
+      .prepare(`
+        SELECT SUBSTR(enrollment_date, 1, 10) as date, COUNT(*) as count
+        FROM enrollments
+        GROUP BY date
+        ORDER BY date ASC
+      `)
+      .all() as { date: string; count: number }[];
+  } catch (err) {
+    console.error("Failed to query enrollment trends:", err);
+    return [];
+  }
+}
+
+

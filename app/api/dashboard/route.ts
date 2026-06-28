@@ -6,6 +6,7 @@ import {
   getDepartmentStats,
 } from "@/lib/student";
 import { getTotalCourses, getAverageEnrollmentsPerStudent, getPopularCourses } from "@/lib/course";
+import { getEnrollmentTrends } from "@/lib/enrollment";
 
 export async function GET() {
   const totalStudents = getTotalStudents();
@@ -14,7 +15,8 @@ export async function GET() {
   const departmentStats = getDepartmentStats();
   const totalCourses = getTotalCourses();
   const averageEnrollments = getAverageEnrollmentsPerStudent();
-  const popularCourses = getPopularCourses(3);
+  const popularCourses = getPopularCourses(5);
+  const enrollmentTrends = getEnrollmentTrends();
 
   return NextResponse.json({
     totalStudents,
@@ -24,6 +26,7 @@ export async function GET() {
     totalCourses,
     averageEnrollments,
     popularCourses,
+    enrollmentTrends,
   });
 }
 
