@@ -24,7 +24,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 lg:flex">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 h-screen sticky top-0">
-        <div className="flex items-center gap-3 mb-8">
+        <Link href="/" className="flex items-center gap-3 mb-8 hover:opacity-85 transition-opacity group">
           <div className="h-10 w-10 rounded-lg bg-zinc-950 dark:bg-white flex items-center justify-center text-white dark:text-zinc-950 shadow-md">
             <GraduationCap className="h-6 w-6" />
           </div>
@@ -32,7 +32,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <h1 className="font-semibold text-lg text-zinc-900 dark:text-white leading-none">EduSuite</h1>
             <span className="text-[10px] text-zinc-450 dark:text-zinc-500 font-bold uppercase tracking-wider block mt-1 select-none">Student Directory</span>
           </div>
-        </div>
+        </Link>
 
         <nav className="flex-1 space-y-1 overflow-y-auto pr-1">
           {navItems.map((item) => {
@@ -78,10 +78,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile Top Nav */}
       <header className="lg:hidden flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4 sticky top-0 z-40">
-        <div className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2 hover:opacity-85 transition-opacity">
           <GraduationCap className="h-6 w-6 text-zinc-900 dark:text-white" />
           <span className="font-semibold text-zinc-900 dark:text-white">EduSuite</span>
-        </div>
+        </Link>
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Button

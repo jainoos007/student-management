@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { getStudents } from "@/lib/student";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
   GraduationCap, 
   LayoutDashboard, 
@@ -33,20 +34,23 @@ export default async function Home() {
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <GraduationCap className="h-6 w-6 text-zinc-900 dark:text-white" />
-            <span className="font-bold text-lg tracking-tight text-zinc-900 dark:text-white">EduSuite</span>
+            <span className="font-bold text-lg tracking-tight text-zinc-900 dark:text-white select-none">EduSuite</span>
           </div>
           <nav className="flex items-center gap-6 text-sm font-medium text-zinc-550 dark:text-zinc-400">
             <Link href="/dashboard" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Overview</Link>
             <Link href="/students" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Students</Link>
             <Link href="/courses" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Courses</Link>
           </nav>
-          <Link
-            href="/dashboard"
-            className="inline-flex h-9 items-center justify-center rounded-lg bg-zinc-950 hover:bg-zinc-900 dark:bg-white dark:hover:bg-zinc-100 px-4 text-xs font-semibold text-white dark:text-zinc-950 transition-all shadow-sm flex items-center gap-1"
-          >
-            <span>Launch App</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <Link
+              href="/dashboard"
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-zinc-950 hover:bg-zinc-900 dark:bg-white dark:hover:bg-zinc-100 px-4 text-xs font-semibold text-white dark:text-zinc-950 transition-all shadow-sm flex items-center gap-1"
+            >
+              <span>Launch App</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -58,11 +62,11 @@ export default async function Home() {
         <div className="max-w-3xl mx-auto flex flex-col items-center">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-indigo-200/80 dark:border-indigo-950 bg-indigo-50/50 dark:bg-indigo-950/20 text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-6">
             <Sparkles className="h-3.5 w-3.5" />
-            <span>EduSuite V1.2 SaaS Release</span>
+            <span>EduSuite V1.2 Registrar Update</span>
           </div>
           
           <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-zinc-900 dark:text-white leading-tight">
-            The modern administrative core for <span className="bg-gradient-to-r from-indigo-550 to-purple-600 bg-clip-text text-transparent">academic operations</span>.
+            The modern administrative core for <span className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 dark:from-indigo-400 dark:via-indigo-300 dark:to-purple-400 bg-clip-text text-transparent">academic operations</span>.
           </h1>
           <p className="mt-6 text-base sm:text-lg text-zinc-500 dark:text-zinc-400 max-w-xl leading-relaxed">
             Consolidate student registry records, automate course enrollment, audit metrics logs, and run detailed reports in real-time.
@@ -78,7 +82,7 @@ export default async function Home() {
             </Link>
             <Link
               href="/students"
-              className="inline-flex h-11 items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 text-sm font-semibold text-zinc-600 dark:text-zinc-300 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-850 shadow-sm"
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 text-sm font-semibold text-zinc-650 dark:text-zinc-300 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-850 shadow-sm"
             >
               Student Registry
             </Link>
@@ -109,7 +113,7 @@ export default async function Home() {
 
       {/* Feature Selling Cards Grid */}
       <section className="px-6 py-12 max-w-5xl mx-auto w-full">
-        <h2 className="text-2xl font-bold text-zinc-900 dark:text-white text-center mb-8">Features built for production</h2>
+        <h2 className="text-2xl font-bold text-zinc-900 dark:text-white text-center mb-8">Features built for administrative control</h2>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {/* Box 1 */}
           <div className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/50 dark:bg-zinc-900/50 p-6">
@@ -146,7 +150,7 @@ export default async function Home() {
 
       {/* Footer */}
       <footer className="mt-auto border-t border-zinc-200/40 dark:border-zinc-800/40 py-6 px-6 text-center text-xs text-zinc-400 bg-white dark:bg-zinc-950">
-        <p>© {new Date().getFullYear()} EduSuite Inc. All rights reserved. Professional SaaS Framework.</p>
+        <p>© {new Date().getFullYear()} EduSuite Inc. All rights reserved. Professional Student Directory Portal.</p>
       </footer>
     </div>
   );
