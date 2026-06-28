@@ -69,6 +69,16 @@
   --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --color-zinc-150: #ececef;
+  --color-zinc-250: #dcdddf;
+  --color-zinc-350: #babac0;
+  --color-zinc-450: #898991;
+  --color-zinc-550: #616169;
+  --color-zinc-650: #48484e;
+  --color-zinc-750: #333336;
+  --color-zinc-755: #303033;
+  --color-zinc-850: #1f1f22;
 }
 
 body {
