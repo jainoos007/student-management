@@ -599,7 +599,7 @@ export function StudentsTable({
     setEditingId(null);
   }
 
-  const hasActiveFilters = selectedCourseFilter !== "all-courses" || selectedDeptFilter !== "all-departments";
+  const hasActiveFilters = selectedCourseFilter !== "all-courses" || selectedDeptFilter !== "all-departments" || searchQuery.trim() !== "";
 
   return (
     <div className="flex flex-col gap-6">
@@ -688,6 +688,20 @@ export function StudentsTable({
           {/* Chips on the left */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Active filters:</span>
+            {searchQuery.trim() !== "" && (
+              <div className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs px-3 py-1 rounded-full border border-zinc-200/50 dark:border-zinc-700/60">
+                <span className="font-semibold">Query:</span>
+                <span>"{searchQuery}"</span>
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="hover:bg-zinc-200 dark:hover:bg-zinc-700 p-0.5 rounded-full text-zinc-500 hover:text-zinc-750 dark:hover:text-zinc-205 ml-1 transition-colors"
+                  aria-label="Clear Search Query"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
             {selectedCourseFilter !== "all-courses" && (
               <div className="inline-flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-400 text-xs px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/40">
                 <span className="font-semibold">Course:</span>
@@ -798,16 +812,17 @@ export function StudentsTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedStudents.map((student) => {
+                 {sortedStudents.map((student) => {
                   return (
-                    <TableRow key={student.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10 transition-colors">
+                    <TableRow 
+                      key={student.id} 
+                      className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10 cursor-pointer group transition-colors"
+                      onClick={() => router.push(`/students/${student.id}`)}
+                    >
                       <TableCell className="px-6 py-4">
-                        <Link
-                          href={`/students/${student.id}`}
-                          className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline transition-all"
-                        >
+                        <span className="font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:underline transition-all">
                           {student.name}
-                        </Link>
+                        </span>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-zinc-650 dark:text-zinc-450">
                         {student.email}
@@ -833,13 +848,16 @@ export function StudentsTable({
                         {new Date(student.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="px-6 py-4">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                           <Button
                             variant="outline"
                             className="h-8 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center gap-1"
                             disabled={deletingId === student.id}
                             type="button"
-                            onClick={() => startEdit(student)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startEdit(student);
+                            }}
                           >
                             <Edit3 className="h-3.5 w-3.5 text-zinc-450" />
                             <span>Edit</span>
@@ -847,18 +865,20 @@ export function StudentsTable({
                           <Link
                             href={`/students/${student.id}`}
                             className="inline-flex h-8 items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center gap-1 shadow-sm"
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <BookOpen className="h-3.5 w-3.5 text-zinc-450" />
                             <span>Details</span>
                           </Link>
                           <Button
                             variant="outline"
-                            className="h-8 border-red-200 dark:border-red-950 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-700 transition-all flex items-center gap-1"
+                            className="h-8 border-red-200 dark:border-red-950 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-700 transition-all flex items-center gap-1"
                             disabled={deletingId === student.id}
                             type="button"
-                            onClick={() =>
-                              deleteStudent(student.id, student.name)
-                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteStudent(student.id, student.name);
+                            }}
                           >
                             {deletingId === student.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
