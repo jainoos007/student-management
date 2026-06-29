@@ -1,6 +1,6 @@
 import { connection } from "next/server";
 import { NextResponse } from "next/server";
-import { queryAuditLogs } from "@/lib/audit";
+import { queryAuditLogs } from "@/lib/db/queries/audit";
 
 function getPositiveNumber(value: string | null, fallback: number) {
   const parsed = Number(value);

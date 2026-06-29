@@ -2,7 +2,7 @@ import {
   createEnrollment,
   deleteEnrollment,
   updateEnrollment,
-} from "@/lib/enrollment";
+} from "@/lib/db/queries/enrollment";
 import { NextResponse } from "next/server";
 
 import { EnrollmentSchema } from "@/lib/schemas";

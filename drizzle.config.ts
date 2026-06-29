@@ -28,7 +28,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 export default defineConfig({
-  schema: "./lib/db/schema.ts",
+  schema: "./lib/db/schema/index.ts",
   out: "./drizzle",
   dialect: "sqlite",
   dbCredentials: {

@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import { getCourses, getTotalCourses, getTotalCredits } from "@/lib/course";
+import { getCourses, getTotalCourses, getTotalCredits } from "@/lib/db/queries/course";
 import { CourseCreateForm } from "./CourseCreateForm";
 import { CoursesTable } from "./CoursesTable";
 import { BookOpen, Award } from "lucide-react";

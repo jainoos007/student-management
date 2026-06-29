@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateStudent, deleteStudent, getStudent } from "@/lib/student";
+import { updateStudent, deleteStudent, getStudent } from "@/lib/db/queries/student";
 import { StudentUpdateSchema } from "@/lib/schemas";
 
 export async function GET(

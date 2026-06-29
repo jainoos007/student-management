@@ -1,6 +1,6 @@
 import { connection } from "next/server";
 import { NextResponse } from "next/server";
-import { getDistinctAuditActions, getDistinctAuditEntityTypes } from "@/lib/audit";
+import { getDistinctAuditActions, getDistinctAuditEntityTypes } from "@/lib/db/queries/audit";
 
 export async function GET() {
   await connection();

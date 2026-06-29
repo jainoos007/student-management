@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { addCourses, getCourses, searchCourses } from "@/lib/course";
+import { addCourses, getCourses, searchCourses } from "@/lib/db/queries/course";
 
 function getPositiveNumber(value: string | null, fallback: number) {
   const parsed = Number(value);

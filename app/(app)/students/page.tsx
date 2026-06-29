@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import { getDepartmentStats, getStudents, getTotalStudents } from "@/lib/student";
+import { getDepartmentStats, getStudents, getTotalStudents } from "@/lib/db/queries/student";
 import { StudentsTable } from "./StudentsTable";
 import { Users, Building2 } from "lucide-react";
 

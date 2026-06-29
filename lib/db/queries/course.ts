@@ -1,7 +1,7 @@
-import { getDb } from "./db";
+import { getDb } from "../index";
 import { Course } from "@/types/course";
 import { addAuditLog } from "./audit";
-import { courses, enrollments, students } from "./db/schema";
+import { courses, enrollments, students } from "../schema";
 import { eq, and, isNull, like, or, sql, desc } from "drizzle-orm";
 
 type CourseUpdate = Pick<Course, "id" | "name" | "code" | "credits">;

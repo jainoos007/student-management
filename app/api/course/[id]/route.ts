@@ -1,4 +1,4 @@
-import { deleteCourse, updateCourse } from "@/lib/course";
+import { deleteCourse, updateCourse } from "@/lib/db/queries/course";
 import { NextRequest, NextResponse } from "next/server";
 
 import { CourseUpdateSchema } from "@/lib/schemas";

@@ -4,9 +4,9 @@ import {
   getAverageAge,
   getOldestStudent,
   getDepartmentStats,
-} from "@/lib/student";
-import { getTotalCourses, getAverageEnrollmentsPerStudent, getPopularCourses } from "@/lib/course";
-import { getEnrollmentTrends } from "@/lib/enrollment";
+} from "@/lib/db/queries/student";
+import { getTotalCourses, getAverageEnrollmentsPerStudent, getPopularCourses } from "@/lib/db/queries/course";
+import { getEnrollmentTrends } from "@/lib/db/queries/enrollment";
 
 export async function GET() {
   const totalStudents = getTotalStudents();

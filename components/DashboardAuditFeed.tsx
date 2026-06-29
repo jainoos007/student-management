@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Activity, RefreshCw } from "lucide-react";
-import type { AuditLog } from "@/lib/audit";
+import type { AuditLog } from "@/lib/db/queries/audit";
 
 export default function DashboardAuditFeed() {
   const [logs, setLogs] = useState<AuditLog[]>([]);

@@ -1,4 +1,4 @@
-import { deleteEnrollment, updateEnrollment, updateEnrollmentGrade } from "@/lib/enrollment";
+import { deleteEnrollment, updateEnrollment, updateEnrollmentGrade } from "@/lib/db/queries/enrollment";
 import { NextResponse } from "next/server";
 
 export async function PUT(

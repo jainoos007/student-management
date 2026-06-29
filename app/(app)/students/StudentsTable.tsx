@@ -862,14 +862,6 @@ export function StudentsTable({
                             <Edit3 className="h-3.5 w-3.5 text-zinc-450" />
                             <span>Edit</span>
                           </Button>
-                          <Link
-                            href={`/students/${student.id}`}
-                            className="inline-flex h-8 items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center gap-1 shadow-sm"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <BookOpen className="h-3.5 w-3.5 text-zinc-450" />
-                            <span>Details</span>
-                          </Link>
                           <Button
                             variant="outline"
                             className="h-8 border-red-200 dark:border-red-950 bg-white dark:bg-zinc-900 px-3 text-xs font-semibold text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-700 transition-all flex items-center gap-1"

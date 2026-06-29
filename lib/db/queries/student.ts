@@ -1,7 +1,7 @@
-import { getDb } from "./db";
+import { getDb } from "../index";
 import type { Student } from "@/types/student";
 import { addAuditLog } from "./audit";
-import { students, enrollments, courses } from "./db/schema";
+import { students, enrollments, courses } from "../schema";
 import { eq, and, isNull, isNotNull, like, or, sql, desc, avg } from "drizzle-orm";
 
 type StudentUpdate = Pick<
@@ -9,6 +9,7 @@ type StudentUpdate = Pick<
   "id" | "name" | "email" | "age" | "department"
 >;
 
+// Shared GPA subquery helper for select projections
 const gpaSubquery = sql<number>`(
   SELECT SUM(
     CASE UPPER(enrollments.grade)

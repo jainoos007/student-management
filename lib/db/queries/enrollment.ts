@@ -1,7 +1,7 @@
-import { getDb } from "./db";
+import { getDb } from "../index";
 import { Enrollment } from "@/types/enrollment";
 import { addAuditLog } from "./audit";
-import { enrollments, students, courses } from "./db/schema";
+import { enrollments, students, courses } from "../schema";
 import { eq, and, isNull, sql } from "drizzle-orm";
 
 type enrollmentUpdate = Pick<Enrollment, "id" | "student_id" | "course_id">;

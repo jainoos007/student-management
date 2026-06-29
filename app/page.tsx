@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { getStudents } from "@/lib/student";
+import { getStudents } from "@/lib/db/queries/student";
 import { HomeHeader } from "@/components/HomeHeader";
 import { 
   GraduationCap, 

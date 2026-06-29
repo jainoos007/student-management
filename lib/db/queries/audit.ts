@@ -1,5 +1,5 @@
-import { getDb } from "./db";
-import { auditLogs } from "./db/schema";
+import { getDb } from "../index";
+import { auditLogs } from "../schema";
 import { desc, eq, and, or, like, sql } from "drizzle-orm";
 
 export type AuditLog = {
@@ -79,7 +79,7 @@ export function queryAuditLogs(options: {
         like(auditLogs.details, searchVal),
         like(auditLogs.action, searchVal),
         sql`CAST(${auditLogs.entity_id} AS TEXT) LIKE ${searchVal}`
-      )
+      )!
     );
   }
 
