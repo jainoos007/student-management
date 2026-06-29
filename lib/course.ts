@@ -188,6 +188,7 @@ export function getAverageEnrollmentsPerStudent(): number {
 
 export function getPopularCourses(limit: number = 3): (Course & { enrollment_count: number })[] {
   const db = getDb();
+  const countExpression = sql<number>`count(${enrollments.id})`;
   
   return db
     .select({
@@ -197,7 +198,7 @@ export function getPopularCourses(limit: number = 3): (Course & { enrollment_cou
       credits: courses.credits,
       created_at: courses.created_at,
       deleted_at: courses.deleted_at,
-      enrollment_count: sql<number>`count(${enrollments.id})`,
+      enrollment_count: countExpression,
     })
     .from(courses)
     .leftJoin(
@@ -206,7 +207,7 @@ export function getPopularCourses(limit: number = 3): (Course & { enrollment_cou
     )
     .where(isNull(courses.deleted_at))
     .groupBy(courses.id)
-    .orderBy(desc(sql`enrollment_count`))
+    .orderBy(desc(countExpression))
     .limit(limit)
     .all() as (Course & { enrollment_count: number })[];
 }

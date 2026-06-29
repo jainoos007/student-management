@@ -9,25 +9,24 @@ type StudentUpdate = Pick<
   "id" | "name" | "email" | "age" | "department"
 >;
 
-// Shared GPA subquery helper for select projections
 const gpaSubquery = sql<number>`(
   SELECT SUM(
-    CASE UPPER(${enrollments.grade})
+    CASE UPPER(enrollments.grade)
       WHEN 'A' THEN 4.0
       WHEN 'B' THEN 3.0
       WHEN 'C' THEN 2.0
       WHEN 'D' THEN 1.0
       WHEN 'F' THEN 0.0
       ELSE 0.0
-    END * ${courses.credits}
-  ) / CAST(SUM(${courses.credits}) AS REAL)
-  FROM ${enrollments}
-  JOIN ${courses} ON ${enrollments.course_id} = ${courses.id}
-  WHERE ${enrollments.student_id} = ${students.id}
-    AND ${enrollments.grade} IS NOT NULL 
-    AND ${enrollments.grade} != '' 
-    AND ${enrollments.deleted_at} IS NULL 
-    AND ${courses.deleted_at} IS NULL
+    END * courses.credits
+  ) / CAST(SUM(courses.credits) AS REAL)
+  FROM enrollments
+  JOIN courses ON enrollments.course_id = courses.id
+  WHERE enrollments.student_id = students.id
+    AND enrollments.grade IS NOT NULL 
+    AND enrollments.grade != '' 
+    AND enrollments.deleted_at IS NULL 
+    AND courses.deleted_at IS NULL
 )`.as("gpa");
 
 export function getStudents(page: number = 1, limit: number = 10): Student[] {
@@ -367,22 +366,22 @@ export function getAverageGPA(): number {
       .select({
         gpa: sql<number>`(
           SELECT SUM(
-            CASE UPPER(${enrollments.grade})
+            CASE UPPER(enrollments.grade)
               WHEN 'A' THEN 4.0
               WHEN 'B' THEN 3.0
               WHEN 'C' THEN 2.0
               WHEN 'D' THEN 1.0
               WHEN 'F' THEN 0.0
               ELSE 0.0
-            END * ${courses.credits}
-          ) / CAST(SUM(${courses.credits}) AS REAL)
-          FROM ${enrollments}
-          JOIN ${courses} ON ${enrollments.course_id} = ${courses.id}
-          WHERE ${enrollments.student_id} = ${students.id}
-            AND ${enrollments.grade} IS NOT NULL 
-            AND ${enrollments.grade} != '' 
-            AND ${enrollments.deleted_at} IS NULL 
-            AND ${courses.deleted_at} IS NULL
+            END * courses.credits
+          ) / CAST(SUM(courses.credits) AS REAL)
+          FROM enrollments
+          JOIN courses ON enrollments.course_id = courses.id
+          WHERE enrollments.student_id = students.id
+            AND enrollments.grade IS NOT NULL 
+            AND enrollments.grade != '' 
+            AND enrollments.deleted_at IS NULL 
+            AND courses.deleted_at IS NULL
         )`.as("gpa"),
       })
       .from(students)
