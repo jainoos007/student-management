@@ -1,60 +1,69 @@
 import { getDb } from "./db";
 import type { Student } from "@/types/student";
 import { addAuditLog } from "./audit";
+import { students, enrollments, courses } from "./db/schema";
+import { eq, and, isNull, isNotNull, like, or, sql, desc, avg } from "drizzle-orm";
 
 type StudentUpdate = Pick<
   Student,
   "id" | "name" | "email" | "age" | "department"
 >;
 
+// Shared GPA subquery helper for select projections
+const gpaSubquery = sql<number>`(
+  SELECT SUM(
+    CASE UPPER(${enrollments.grade})
+      WHEN 'A' THEN 4.0
+      WHEN 'B' THEN 3.0
+      WHEN 'C' THEN 2.0
+      WHEN 'D' THEN 1.0
+      WHEN 'F' THEN 0.0
+      ELSE 0.0
+    END * ${courses.credits}
+  ) / CAST(SUM(${courses.credits}) AS REAL)
+  FROM ${enrollments}
+  JOIN ${courses} ON ${enrollments.course_id} = ${courses.id}
+  WHERE ${enrollments.student_id} = ${students.id}
+    AND ${enrollments.grade} IS NOT NULL 
+    AND ${enrollments.grade} != '' 
+    AND ${enrollments.deleted_at} IS NULL 
+    AND ${courses.deleted_at} IS NULL
+)`.as("gpa");
+
 export function getStudents(page: number = 1, limit: number = 10): Student[] {
   const offset = (page - 1) * limit;
   const db = getDb();
   return db
-    .prepare(`
-      SELECT s.*, 
-        (
-          SELECT SUM(
-            CASE UPPER(e.grade)
-              WHEN 'A' THEN 4.0
-              WHEN 'B' THEN 3.0
-              WHEN 'C' THEN 2.0
-              WHEN 'D' THEN 1.0
-              WHEN 'F' THEN 0.0
-              ELSE 0.0
-            END * c.credits
-          ) / CAST(SUM(c.credits) AS REAL)
-          FROM enrollments e
-          JOIN courses c ON e.course_id = c.id
-          WHERE e.student_id = s.id 
-            AND e.grade IS NOT NULL 
-            AND e.grade != '' 
-            AND e.deleted_at IS NULL 
-            AND c.deleted_at IS NULL
-        ) as gpa
-      FROM students s
-      WHERE s.deleted_at IS NULL 
-      ORDER BY s.created_at DESC, s.id DESC 
-      LIMIT ? OFFSET ?
-    `)
-    .all(limit, offset) as Student[];
+    .select({
+      id: students.id,
+      name: students.name,
+      email: students.email,
+      age: students.age,
+      department: students.department,
+      created_at: students.created_at,
+      gpa: gpaSubquery,
+    })
+    .from(students)
+    .where(isNull(students.deleted_at))
+    .orderBy(desc(students.created_at), desc(students.id))
+    .limit(limit)
+    .offset(offset)
+    .all() as unknown as Student[];
 }
 
 export function addStudent(student: Omit<Student, "id" | "created_at">) {
   const db = getDb();
   const createdAt = new Date().toISOString();
   const result = db
-    .prepare(
-      `
-      INSERT INTO students (name, email, age, department, created_at) VALUES (?, ?, ?, ?, ?) `,
-    )
-    .run(
-      student.name,
-      student.email,
-      student.age,
-      student.department,
-      createdAt,
-    );
+    .insert(students)
+    .values({
+      name: student.name,
+      email: student.email,
+      age: student.age,
+      department: student.department,
+      created_at: createdAt,
+    })
+    .run();
 
   if (result.changes > 0) {
     addAuditLog(
@@ -70,19 +79,15 @@ export function addStudent(student: Omit<Student, "id" | "created_at">) {
 export function updateStudent(student: StudentUpdate) {
   const db = getDb();
   const result = db
-    .prepare(
-      `
-    UPDATE students
-    SET name = ?, email = ?, age = ?, department = ?
-    WHERE id = ? AND deleted_at IS NULL`,
-    )
-    .run(
-      student.name,
-      student.email,
-      student.age,
-      student.department,
-      student.id,
-    );
+    .update(students)
+    .set({
+      name: student.name,
+      email: student.email,
+      age: student.age,
+      department: student.department,
+    })
+    .where(and(eq(students.id, student.id), isNull(students.deleted_at)))
+    .run();
 
   if (result.changes > 0) {
     addAuditLog(
@@ -98,16 +103,27 @@ export function updateStudent(student: StudentUpdate) {
 export function deleteStudent(id: number) {
   const db = getDb();
   const deletedAt = new Date().toISOString();
-  const student = db.prepare("SELECT * FROM students WHERE id = ? AND deleted_at IS NULL").get(id) as
-    | Student
-    | undefined;
+  
+  const student = db
+    .select()
+    .from(students)
+    .where(and(eq(students.id, id), isNull(students.deleted_at)))
+    .get() as Student | undefined;
   
   // Soft delete student record
-  const result = db.prepare("UPDATE students SET deleted_at = ? WHERE id = ?").run(deletedAt, id);
+  const result = db
+    .update(students)
+    .set({ deleted_at: deletedAt })
+    .where(eq(students.id, id))
+    .run();
 
   // Soft delete associated enrollment mappings
   if (result.changes > 0) {
-    db.prepare("UPDATE enrollments SET deleted_at = ? WHERE student_id = ? AND deleted_at IS NULL").run(deletedAt, id);
+    db
+      .update(enrollments)
+      .set({ deleted_at: deletedAt })
+      .where(and(eq(enrollments.student_id, id), isNull(enrollments.deleted_at)))
+      .run();
   }
 
   if (result.changes > 0 && student) {
@@ -123,99 +139,82 @@ export function deleteStudent(id: number) {
 
 export function searchStudents(query: string): Student[] {
   const db = getDb();
+  const searchVal = `%${query}%`;
   return db
-    .prepare(
-      `
-    SELECT s.*, 
-      (
-        SELECT SUM(
-          CASE UPPER(e.grade)
-            WHEN 'A' THEN 4.0
-            WHEN 'B' THEN 3.0
-            WHEN 'C' THEN 2.0
-            WHEN 'D' THEN 1.0
-            WHEN 'F' THEN 0.0
-            ELSE 0.0
-          END * c.credits
-        ) / CAST(SUM(c.credits) AS REAL)
-        FROM enrollments e
-        JOIN courses c ON e.course_id = c.id
-        WHERE e.student_id = s.id 
-          AND e.grade IS NOT NULL 
-          AND e.grade != '' 
-          AND e.deleted_at IS NULL 
-          AND c.deleted_at IS NULL
-      ) as gpa
-    FROM students s
-    WHERE s.deleted_at IS NULL AND (s.name LIKE ? OR s.email LIKE ? OR s.department LIKE ?)`,
+    .select({
+      id: students.id,
+      name: students.name,
+      email: students.email,
+      age: students.age,
+      department: students.department,
+      created_at: students.created_at,
+      gpa: gpaSubquery,
+    })
+    .from(students)
+    .where(
+      and(
+        isNull(students.deleted_at),
+        or(
+          like(students.name, searchVal),
+          like(students.email, searchVal),
+          like(students.department, searchVal)
+        )
+      )
     )
-    .all(`%${query}%`, `%${query}%`, `%${query}%`) as Student[];
+    .all() as unknown as Student[];
 }
 
 export function getTotalStudents(): number {
   const db = getDb();
-  const result = db.prepare("SELECT COUNT(*) as count FROM students WHERE deleted_at IS NULL").get() as {
-    count: number;
-  };
-  return result.count;
+  const result = db
+    .select({ count: sql<number>`count(*)` })
+    .from(students)
+    .where(isNull(students.deleted_at))
+    .get();
+  return result?.count ?? 0;
 }
 
 export function getAverageAge(): number {
   const db = getDb();
   const result = db
-    .prepare("SELECT AVG(age) as average FROM students WHERE deleted_at IS NULL")
-    .get() as { average: number | null };
-  return result.average ?? 0;
+    .select({ average: sql<number>`avg(${students.age})` })
+    .from(students)
+    .where(isNull(students.deleted_at))
+    .get();
+  return result?.average ?? 0;
 }
 
 export function getOldestStudent(): Student | null {
   const db = getDb();
   const result = db
-    .prepare(
-      `
-    SELECT s.*,
-      (
-        SELECT SUM(
-          CASE UPPER(e.grade)
-            WHEN 'A' THEN 4.0
-            WHEN 'B' THEN 3.0
-            WHEN 'C' THEN 2.0
-            WHEN 'D' THEN 1.0
-            WHEN 'F' THEN 0.0
-            ELSE 0.0
-          END * c.credits
-        ) / CAST(SUM(c.credits) AS REAL)
-        FROM enrollments e
-        JOIN courses c ON e.course_id = c.id
-        WHERE e.student_id = s.id 
-          AND e.grade IS NOT NULL 
-          AND e.grade != '' 
-          AND e.deleted_at IS NULL 
-          AND c.deleted_at IS NULL
-      ) as gpa
-    FROM students s
-    WHERE s.deleted_at IS NULL
-    ORDER BY s.age DESC
-    LIMIT 1
-    `,
-    )
-    .get() as Student | undefined;
+    .select({
+      id: students.id,
+      name: students.name,
+      email: students.email,
+      age: students.age,
+      department: students.department,
+      created_at: students.created_at,
+      gpa: gpaSubquery,
+    })
+    .from(students)
+    .where(isNull(students.deleted_at))
+    .orderBy(desc(students.age))
+    .limit(1)
+    .get() as unknown as Student | undefined;
   return result ?? null;
 }
 
 export function getDepartmentStats(): { department: string; count: number }[] {
   const db = getDb();
-  const result = db
-    .prepare(
-      `
-    SELECT department, COUNT(*) as count
-    FROM students
-    WHERE deleted_at IS NULL
-    GROUP BY department
-    `,
-    )
+  return db
+    .select({
+      department: students.department,
+      count: sql<number>`count(*)`,
+    })
+    .from(students)
+    .where(isNull(students.deleted_at))
+    .groupBy(students.department)
     .all() as { department: string; count: number }[];
-  return result;
 }
 
 export function getStudentsByCourse(
@@ -226,49 +225,44 @@ export function getStudentsByCourse(
   const offset = (page - 1) * limit;
   const db = getDb();
   return db
-    .prepare(
-      `
-      SELECT s.*,
-        (
-          SELECT SUM(
-            CASE UPPER(e.grade)
-              WHEN 'A' THEN 4.0
-              WHEN 'B' THEN 3.0
-              WHEN 'C' THEN 2.0
-              WHEN 'D' THEN 1.0
-              WHEN 'F' THEN 0.0
-              ELSE 0.0
-            END * c.credits
-          ) / CAST(SUM(c.credits) AS REAL)
-          FROM enrollments e
-          JOIN courses c ON e.course_id = c.id
-          WHERE e.student_id = s.id 
-            AND e.grade IS NOT NULL 
-            AND e.grade != '' 
-            AND e.deleted_at IS NULL 
-            AND c.deleted_at IS NULL
-        ) as gpa
-      FROM students s
-      JOIN enrollments e ON s.id = e.student_id
-      WHERE e.course_id = ? AND s.deleted_at IS NULL AND e.deleted_at IS NULL
-      LIMIT ? OFFSET ?
-    `,
+    .select({
+      id: students.id,
+      name: students.name,
+      email: students.email,
+      age: students.age,
+      department: students.department,
+      created_at: students.created_at,
+      gpa: gpaSubquery,
+    })
+    .from(students)
+    .innerJoin(enrollments, eq(students.id, enrollments.student_id))
+    .where(
+      and(
+        eq(enrollments.course_id, courseId),
+        isNull(students.deleted_at),
+        isNull(enrollments.deleted_at)
+      )
     )
-    .all(courseId, limit, offset) as Student[];
+    .limit(limit)
+    .offset(offset)
+    .all() as unknown as Student[];
 }
 
 export function getTotalStudentsByCourse(courseId: number): number {
   const db = getDb();
   const result = db
-    .prepare(
-      `
-    SELECT COUNT(*) as count FROM students s
-    JOIN enrollments e ON s.id = e.student_id
-    WHERE e.course_id = ? AND s.deleted_at IS NULL AND e.deleted_at IS NULL
-  `,
+    .select({ count: sql<number>`count(*)` })
+    .from(students)
+    .innerJoin(enrollments, eq(students.id, enrollments.student_id))
+    .where(
+      and(
+        eq(enrollments.course_id, courseId),
+        isNull(students.deleted_at),
+        isNull(enrollments.deleted_at)
+      )
     )
-    .get(courseId) as { count: number };
-  return result.count;
+    .get();
+  return result?.count ?? 0;
 }
 
 export function getStudentsByDepartment(
@@ -279,39 +273,31 @@ export function getStudentsByDepartment(
   const offset = (page - 1) * limit;
   const db = getDb();
   return db
-    .prepare(`
-      SELECT s.*,
-        (
-          SELECT SUM(
-            CASE UPPER(e.grade)
-              WHEN 'A' THEN 4.0
-              WHEN 'B' THEN 3.0
-              WHEN 'C' THEN 2.0
-              WHEN 'D' THEN 1.0
-              WHEN 'F' THEN 0.0
-              ELSE 0.0
-            END * c.credits
-          ) / CAST(SUM(c.credits) AS REAL)
-          FROM enrollments e
-          JOIN courses c ON e.course_id = c.id
-          WHERE e.student_id = s.id 
-            AND e.grade IS NOT NULL 
-            AND e.grade != '' 
-            AND e.deleted_at IS NULL 
-            AND c.deleted_at IS NULL
-        ) as gpa
-      FROM students s 
-      WHERE s.department = ? AND s.deleted_at IS NULL 
-      LIMIT ? OFFSET ?
-    `)
-    .all(department, limit, offset) as Student[];
+    .select({
+      id: students.id,
+      name: students.name,
+      email: students.email,
+      age: students.age,
+      department: students.department,
+      created_at: students.created_at,
+      gpa: gpaSubquery,
+    })
+    .from(students)
+    .where(and(eq(students.department, department), isNull(students.deleted_at)))
+    .limit(limit)
+    .offset(offset)
+    .all() as unknown as Student[];
 }
 
 export function getDepartments(): string[] {
   const db = getDb();
   const results = db
-    .prepare("SELECT DISTINCT department FROM students WHERE deleted_at IS NULL ORDER BY department ASC")
-    .all() as { department: string }[];
+    .select({ department: students.department })
+    .from(students)
+    .where(isNull(students.deleted_at))
+    .groupBy(students.department)
+    .orderBy(students.department)
+    .all();
   return results.map((r) => r.department);
 }
 
@@ -328,91 +314,88 @@ export function queryStudents(options: {
 
   const db = getDb();
 
-  let sql = `
-    SELECT DISTINCT s.*,
-      (
-        SELECT SUM(
-          CASE UPPER(e.grade)
-            WHEN 'A' THEN 4.0
-            WHEN 'B' THEN 3.0
-            WHEN 'C' THEN 2.0
-            WHEN 'D' THEN 1.0
-            WHEN 'F' THEN 0.0
-            ELSE 0.0
-          END * c.credits
-        ) / CAST(SUM(c.credits) AS REAL)
-        FROM enrollments e
-        JOIN courses c ON e.course_id = c.id
-        WHERE e.student_id = s.id 
-          AND e.grade IS NOT NULL 
-          AND e.grade != '' 
-          AND e.deleted_at IS NULL 
-          AND c.deleted_at IS NULL
-      ) as gpa
-    FROM students s
-  `;
-  
-  const params: any[] = [];
-  const conditions: string[] = [`s.deleted_at IS NULL`];
+  const conditions: any[] = [isNull(students.deleted_at)];
+
+  let queryBuilder = db
+    .selectDistinct({
+      id: students.id,
+      name: students.name,
+      email: students.email,
+      age: students.age,
+      department: students.department,
+      created_at: students.created_at,
+      gpa: gpaSubquery,
+    })
+    .from(students);
 
   if (options.courseId) {
-    sql += ` JOIN enrollments e ON s.id = e.student_id`;
-    conditions.push(`e.course_id = ?`);
-    conditions.push(`e.deleted_at IS NULL`);
-    params.push(options.courseId);
+    queryBuilder = queryBuilder.innerJoin(
+      enrollments,
+      eq(students.id, enrollments.student_id)
+    ) as any;
+    conditions.push(eq(enrollments.course_id, options.courseId));
+    conditions.push(isNull(enrollments.deleted_at));
   }
 
   if (options.department) {
-    conditions.push(`s.department = ?`);
-    params.push(options.department);
+    conditions.push(eq(students.department, options.department));
   }
 
   if (options.query) {
-    conditions.push(`(s.name LIKE ? OR s.email LIKE ? OR s.department LIKE ?)`);
     const likeQuery = `%${options.query}%`;
-    params.push(likeQuery, likeQuery, likeQuery);
+    conditions.push(
+      or(
+        like(students.name, likeQuery),
+        like(students.email, likeQuery),
+        like(students.department, likeQuery)
+      )
+    );
   }
 
-  if (conditions.length > 0) {
-    sql += ` WHERE ` + conditions.join(` AND `);
-  }
-
-  sql += ` ORDER BY s.created_at DESC, s.id DESC LIMIT ? OFFSET ?`;
-  params.push(limit, offset);
-
-  return db.prepare(sql).all(...params) as Student[];
+  return queryBuilder
+    .where(and(...conditions))
+    .orderBy(desc(students.created_at), desc(students.id))
+    .limit(limit)
+    .offset(offset)
+    .all() as unknown as Student[];
 }
 
 export function getAverageGPA(): number {
   const db = getDb();
   try {
-    const result = db.prepare(`
-      SELECT AVG(gpa) as avg_gpa FROM (
-        SELECT 
-          (
-            SELECT SUM(
-              CASE UPPER(e.grade)
-                WHEN 'A' THEN 4.0
-                WHEN 'B' THEN 3.0
-                WHEN 'C' THEN 2.0
-                WHEN 'D' THEN 1.0
-                WHEN 'F' THEN 0.0
-                ELSE 0.0
-              END * c.credits
-            ) / CAST(SUM(c.credits) AS REAL)
-            FROM enrollments e
-            JOIN courses c ON e.course_id = c.id
-            WHERE e.student_id = s.id 
-              AND e.grade IS NOT NULL 
-              AND e.grade != '' 
-              AND e.deleted_at IS NULL 
-              AND c.deleted_at IS NULL
-          ) as gpa
-        FROM students s
-        WHERE s.deleted_at IS NULL
-      ) WHERE gpa IS NOT NULL
-    `).get() as { avg_gpa: number | null };
-    return result.avg_gpa ?? 0;
+    const gpaSubqueryTable = db
+      .select({
+        gpa: sql<number>`(
+          SELECT SUM(
+            CASE UPPER(${enrollments.grade})
+              WHEN 'A' THEN 4.0
+              WHEN 'B' THEN 3.0
+              WHEN 'C' THEN 2.0
+              WHEN 'D' THEN 1.0
+              WHEN 'F' THEN 0.0
+              ELSE 0.0
+            END * ${courses.credits}
+          ) / CAST(SUM(${courses.credits}) AS REAL)
+          FROM ${enrollments}
+          JOIN ${courses} ON ${enrollments.course_id} = ${courses.id}
+          WHERE ${enrollments.student_id} = ${students.id}
+            AND ${enrollments.grade} IS NOT NULL 
+            AND ${enrollments.grade} != '' 
+            AND ${enrollments.deleted_at} IS NULL 
+            AND ${courses.deleted_at} IS NULL
+        )`.as("gpa"),
+      })
+      .from(students)
+      .where(isNull(students.deleted_at))
+      .as("gpa_subquery");
+
+    const result = db
+      .select({ avg_gpa: avg(gpaSubqueryTable.gpa) })
+      .from(gpaSubqueryTable)
+      .where(isNotNull(gpaSubqueryTable.gpa))
+      .get();
+      
+    return Number(result?.avg_gpa ?? 0);
   } catch (err) {
     console.error("Failed to query average GPA:", err);
     return 0;
@@ -423,35 +406,21 @@ export function getStudent(id: number): Student | null {
   const db = getDb();
   try {
     const student = db
-      .prepare(`
-        SELECT s.*, 
-          (
-            SELECT SUM(
-              CASE UPPER(e.grade)
-                WHEN 'A' THEN 4.0
-                WHEN 'B' THEN 3.0
-                WHEN 'C' THEN 2.0
-                WHEN 'D' THEN 1.0
-                WHEN 'F' THEN 0.0
-                ELSE 0.0
-              END * c.credits
-            ) / CAST(SUM(c.credits) AS REAL)
-            FROM enrollments e
-            JOIN courses c ON e.course_id = c.id
-            WHERE e.student_id = s.id 
-              AND e.grade IS NOT NULL 
-              AND e.grade != '' 
-              AND e.deleted_at IS NULL 
-              AND c.deleted_at IS NULL
-          ) as gpa
-        FROM students s
-        WHERE s.id = ? AND s.deleted_at IS NULL
-      `)
-      .get(id) as Student | undefined;
+      .select({
+        id: students.id,
+        name: students.name,
+        email: students.email,
+        age: students.age,
+        department: students.department,
+        created_at: students.created_at,
+        gpa: gpaSubquery,
+      })
+      .from(students)
+      .where(and(eq(students.id, id), isNull(students.deleted_at)))
+      .get() as unknown as Student | undefined;
     return student ?? null;
   } catch (err) {
     console.error("Failed to fetch student by id:", err);
     return null;
   }
 }
-

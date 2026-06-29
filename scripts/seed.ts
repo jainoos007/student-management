@@ -1,17 +1,14 @@
-import * as BetterSqlite3 from "better-sqlite3";
+import { getDb, getRawDb } from "../lib/db";
+import { students, courses, enrollments, auditLogs } from "../lib/db/schema";
 
-type DatabaseConstructor = new (filename: string) => BetterSqlite3.Database;
-
-const Database =
-  (BetterSqlite3 as unknown as { default?: DatabaseConstructor }).default ??
-  (BetterSqlite3 as unknown as DatabaseConstructor);
-const db = new Database("database/students.db");
+const db = getDb();
+const rawDb = getRawDb();
 
 // Enable foreign keys
-db.exec("PRAGMA foreign_keys = ON;");
+rawDb.exec("PRAGMA foreign_keys = ON;");
 
 // Clear existing data to allow re-seeding without UNIQUE/FOREIGN KEY violations
-db.exec(`
+rawDb.exec(`
   DELETE FROM enrollments;
   DELETE FROM courses;
   DELETE FROM students;
@@ -50,50 +47,38 @@ const coursesList = [
   { name: "College Composition", code: "ENG101", credits: 3 },
 ];
 
-const courseStmt = db.prepare(`
-  INSERT INTO courses (name, code, credits, created_at) VALUES (?, ?, ?, ?)
-`);
-
-const auditStmt = db.prepare(`
-  INSERT INTO audit_logs (action, entity_type, entity_id, details, created_at) VALUES (?, ?, ?, ?, ?)
-`);
-
 type CourseRecord = {
   id: number;
   createdDate: Date;
 };
 
-const courses: CourseRecord[] = [];
+const coursesInserted: CourseRecord[] = [];
 for (const course of coursesList) {
   const createdDate = getRandomDateBetween(getDateDaysAgo(25), getDateDaysAgo(20));
   const createdDateStr = createdDate.toISOString();
   
-  const result = courseStmt.run(
-    course.name,
-    course.code,
-    course.credits,
-    createdDateStr
-  );
+  const result = db.insert(courses).values({
+    name: course.name,
+    code: course.code,
+    credits: course.credits,
+    created_at: createdDateStr,
+  }).run();
   
   const courseId = Number(result.lastInsertRowid);
-  courses.push({ id: courseId, createdDate });
+  coursesInserted.push({ id: courseId, createdDate });
 
   // Add course audit log
-  auditStmt.run(
-    "CREATE_COURSE",
-    "COURSE",
-    courseId,
-    `Created course catalog entry ${course.name} [${course.code}] worth ${course.credits} credits.`,
-    createdDateStr
-  );
+  db.insert(auditLogs).values({
+    action: "CREATE_COURSE",
+    entity_type: "COURSE",
+    entity_id: courseId,
+    details: `Created course catalog entry ${course.name} [${course.code}] worth ${course.credits} credits.`,
+    created_at: createdDateStr,
+  }).run();
 }
 console.log(`${coursesList.length} courses inserted!`);
 
 // Seed Students (created between 15 days ago and 2 days ago)
-const studentStmt = db.prepare(`
-  INSERT INTO students (name, email, age, department, created_at) VALUES (?, ?, ?, ?, ?)
-`);
-
 const departments = [
   "Computer Science",
   "Mathematics",
@@ -108,7 +93,7 @@ type StudentRecord = {
   createdDate: Date;
 };
 
-const students: StudentRecord[] = [];
+const studentsInserted: StudentRecord[] = [];
 for (let i = 1; i <= 50; i++) {
   const name = `Student ${i}`;
   const email = `student${i}@university.edu`;
@@ -119,34 +104,35 @@ for (let i = 1; i <= 50; i++) {
   const createdDate = getRandomDateBetween(getDateDaysAgo(15), getDateDaysAgo(2));
   const createdDateStr = createdDate.toISOString();
 
-  const result = studentStmt.run(name, email, age, department, createdDateStr);
+  const result = db.insert(students).values({
+    name,
+    email,
+    age,
+    department,
+    created_at: createdDateStr,
+  }).run();
   const studentId = Number(result.lastInsertRowid);
   
-  students.push({ id: studentId, name, createdDate });
+  studentsInserted.push({ id: studentId, name, createdDate });
 
   // Add student audit log
-  auditStmt.run(
-    "CREATE_STUDENT",
-    "STUDENT",
-    studentId,
-    `Registered student ${name} (${email}) in ${department} department.`,
-    createdDateStr
-  );
+  db.insert(auditLogs).values({
+    action: "CREATE_STUDENT",
+    entity_type: "STUDENT",
+    entity_id: studentId,
+    details: `Registered student ${name} (${email}) in ${department} department.`,
+    created_at: createdDateStr,
+  }).run();
 }
 console.log("50 students inserted!");
-
-// Seed Enrollments (enrolled between their student creation date and now)
-const enrollmentStmt = db.prepare(`
-  INSERT INTO enrollments (student_id, course_id, enrollment_date, grade) VALUES (?, ?, ?, ?)
-`);
 
 const gradesPool = ["A", "B", "C", "D", "F", null];
 
 let enrollmentCount = 0;
-for (const student of students) {
+for (const student of studentsInserted) {
   // Enroll each student in 1 to 4 random courses
   const numCourses = Math.floor(Math.random() * 4) + 1;
-  const shuffledCourses = [...courses].sort(() => 0.5 - Math.random());
+  const shuffledCourses = [...coursesInserted].sort(() => 0.5 - Math.random());
   const chosenCourses = shuffledCourses.slice(0, numCourses);
 
   for (const course of chosenCourses) {
@@ -160,22 +146,28 @@ for (const student of students) {
       ? gradesPool[Math.floor(Math.random() * 5)] // A, B, C, D, F
       : null;
 
-    const result = enrollmentStmt.run(student.id, course.id, enrollmentDateStr, grade);
+    const result = db.insert(enrollments).values({
+      student_id: student.id,
+      course_id: course.id,
+      enrollment_date: enrollmentDateStr,
+      grade,
+    }).run();
     const enrollmentId = Number(result.lastInsertRowid);
     enrollmentCount++;
 
     // Add enrollment audit log
-    const courseCode = coursesList.find((_, index) => courses[index].id === course.id)?.code || "COURSE";
-    const courseName = coursesList.find((_, index) => courses[index].id === course.id)?.name || "Course";
+    const courseIndex = coursesInserted.findIndex(c => c.id === course.id);
+    const courseCode = coursesList[courseIndex]?.code || "COURSE";
+    const courseName = coursesList[courseIndex]?.name || "Course";
 
     const gradeLogStr = grade ? `with grade "${grade}"` : "(in progress)";
-    auditStmt.run(
-      "ENROLL_STUDENT",
-      "ENROLLMENT",
-      enrollmentId,
-      `Enrolled student ${student.name} in course ${courseName} [${courseCode}] ${gradeLogStr}.`,
-      enrollmentDateStr
-    );
+    db.insert(auditLogs).values({
+      action: "ENROLL_STUDENT",
+      entity_type: "ENROLLMENT",
+      entity_id: enrollmentId,
+      details: `Enrolled student ${student.name} in course ${courseName} [${courseCode}] ${gradeLogStr}.`,
+      created_at: enrollmentDateStr,
+    }).run();
   }
 }
 console.log(`${enrollmentCount} enrollments inserted!`);

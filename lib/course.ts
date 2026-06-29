@@ -1,6 +1,8 @@
 import { getDb } from "./db";
 import { Course } from "@/types/course";
 import { addAuditLog } from "./audit";
+import { courses, enrollments, students } from "./db/schema";
+import { eq, and, isNull, like, or, sql, desc } from "drizzle-orm";
 
 type CourseUpdate = Pick<Course, "id" | "name" | "code" | "credits">;
 
@@ -8,23 +10,26 @@ export function getCourses(page: number = 1, limit: number = 10) {
   const offset = (page - 1) * limit;
   const db = getDb();
   return db
-    .prepare(
-      `
-        SELECT * FROM courses WHERE deleted_at IS NULL LIMIT ? OFFSET ?`,
-    )
-    .all(limit, offset) as Course[];
+    .select()
+    .from(courses)
+    .where(isNull(courses.deleted_at))
+    .limit(limit)
+    .offset(offset)
+    .all() as Course[];
 }
 
 export function addCourses(course: Omit<Course, "id" | "created_at">) {
   const db = getDb();
   const created_at = new Date().toISOString();
   const result = db
-    .prepare(
-      `
-    INSERT INTO courses (name, code, credits, created_at) VALUES (?,?,?,?)
-    `,
-    )
-    .run(course.name, course.code, course.credits, created_at);
+    .insert(courses)
+    .values({
+      name: course.name,
+      code: course.code,
+      credits: course.credits,
+      created_at,
+    })
+    .run();
 
   if (result.changes > 0) {
     addAuditLog(
@@ -40,12 +45,14 @@ export function addCourses(course: Omit<Course, "id" | "created_at">) {
 export function updateCourse(course: CourseUpdate) {
   const db = getDb();
   const result = db
-    .prepare(
-      `
-        UPDATE courses SET name = ? , code = ? , credits = ? WHERE id = ? AND deleted_at IS NULL
-        `,
-    )
-    .run(course.name, course.code, course.credits, course.id);
+    .update(courses)
+    .set({
+      name: course.name,
+      code: course.code,
+      credits: course.credits,
+    })
+    .where(and(eq(courses.id, course.id), isNull(courses.deleted_at)))
+    .run();
 
   if (result.changes > 0) {
     addAuditLog(
@@ -61,14 +68,27 @@ export function updateCourse(course: CourseUpdate) {
 export function deleteCourse(id: number) {
   const db = getDb();
   const deletedAt = new Date().toISOString();
-  const course = db.prepare("SELECT * FROM courses WHERE id = ? AND deleted_at IS NULL").get(id) as Course | undefined;
+  
+  const course = db
+    .select()
+    .from(courses)
+    .where(and(eq(courses.id, id), isNull(courses.deleted_at)))
+    .get() as Course | undefined;
   
   // Soft delete course record
-  const result = db.prepare(`UPDATE courses SET deleted_at = ? WHERE id = ?`).run(deletedAt, id);
+  const result = db
+    .update(courses)
+    .set({ deleted_at: deletedAt })
+    .where(eq(courses.id, id))
+    .run();
 
   // Soft delete enrollments mapping for this course
   if (result.changes > 0) {
-    db.prepare("UPDATE enrollments SET deleted_at = ? WHERE course_id = ? AND deleted_at IS NULL").run(deletedAt, id);
+    db
+      .update(enrollments)
+      .set({ deleted_at: deletedAt })
+      .where(and(eq(enrollments.course_id, id), isNull(enrollments.deleted_at)))
+      .run();
   }
 
   if (result.changes > 0 && course) {
@@ -85,62 +105,108 @@ export function deleteCourse(id: number) {
 export function getStudentCourses(studentId: number) {
   const db = getDb();
   return db
-    .prepare(
-      `
-     SELECT c.*, e.id as enrollment_id, e.grade FROM courses c
-     JOIN enrollments e ON c.id = e.course_id
-     WHERE e.student_id = ? AND c.deleted_at IS NULL AND e.deleted_at IS NULL
-    `,
+    .select({
+      id: courses.id,
+      name: courses.name,
+      code: courses.code,
+      credits: courses.credits,
+      created_at: courses.created_at,
+      deleted_at: courses.deleted_at,
+      enrollment_id: enrollments.id,
+      grade: enrollments.grade,
+    })
+    .from(courses)
+    .innerJoin(enrollments, eq(courses.id, enrollments.course_id))
+    .where(
+      and(
+        eq(enrollments.student_id, studentId),
+        isNull(courses.deleted_at),
+        isNull(enrollments.deleted_at)
+      )
     )
-    .all(studentId) as (Course & { enrollment_id: number; grade?: string | null })[];
+    .all() as (Course & { enrollment_id: number; grade?: string | null })[];
 }
 
 export function searchCourses(query: string): Course[] {
   const db = getDb();
+  const searchVal = `%${query}%`;
   return db
-    .prepare(
-      `
-        SELECT * FROM courses
-        WHERE deleted_at IS NULL AND (name LIKE ? OR code LIKE ? OR credits LIKE ?)
-        `,
+    .select()
+    .from(courses)
+    .where(
+      and(
+        isNull(courses.deleted_at),
+        or(
+          like(courses.name, searchVal),
+          like(courses.code, searchVal),
+          sql`CAST(${courses.credits} AS TEXT) LIKE ${searchVal}`
+        )
+      )
     )
-    .all(`%${query}%`, `%${query}%`, `%${query}%`) as Course[];
+    .all() as Course[];
 }
 
 export function getTotalCourses(): number {
   const db = getDb();
-  const result = db.prepare("SELECT COUNT(*) as count FROM courses WHERE deleted_at IS NULL").get() as {
-    count: number;
-  };
-  return result.count;
+  const result = db
+    .select({ count: sql<number>`count(*)` })
+    .from(courses)
+    .where(isNull(courses.deleted_at))
+    .get();
+  return result?.count ?? 0;
 }
 
 export function getTotalCredits(): number {
   const db = getDb();
-  const result = db.prepare("SELECT SUM(credits) as sum FROM courses WHERE deleted_at IS NULL").get() as {
-    sum: number | null;
-  };
-  return result.sum || 0;
+  const result = db
+    .select({ sum: sql<number>`sum(${courses.credits})` })
+    .from(courses)
+    .where(isNull(courses.deleted_at))
+    .get();
+  return result?.sum ?? 0;
 }
 
 export function getAverageEnrollmentsPerStudent(): number {
   const db = getDb();
-  const totalStudents = (db.prepare("SELECT COUNT(*) as count FROM students WHERE deleted_at IS NULL").get() as { count: number }).count;
+  const totalStudentsResult = db
+    .select({ count: sql<number>`count(*)` })
+    .from(students)
+    .where(isNull(students.deleted_at))
+    .get();
+  const totalStudents = totalStudentsResult?.count ?? 0;
   if (totalStudents === 0) return 0;
-  const totalEnrollments = (db.prepare("SELECT COUNT(*) as count FROM enrollments WHERE deleted_at IS NULL").get() as { count: number }).count;
+  
+  const totalEnrollmentsResult = db
+    .select({ count: sql<number>`count(*)` })
+    .from(enrollments)
+    .where(isNull(enrollments.deleted_at))
+    .get();
+  const totalEnrollments = totalEnrollmentsResult?.count ?? 0;
+  
   return totalEnrollments / totalStudents;
 }
 
 export function getPopularCourses(limit: number = 3): (Course & { enrollment_count: number })[] {
   const db = getDb();
+  
   return db
-    .prepare(`
-      SELECT c.*, COUNT(e.id) as enrollment_count FROM courses c
-      LEFT JOIN enrollments e ON c.id = e.course_id AND e.deleted_at IS NULL
-      WHERE c.deleted_at IS NULL
-      GROUP BY c.id
-      ORDER BY enrollment_count DESC
-      LIMIT ?
-    `)
-    .all(limit) as (Course & { enrollment_count: number })[];
+    .select({
+      id: courses.id,
+      name: courses.name,
+      code: courses.code,
+      credits: courses.credits,
+      created_at: courses.created_at,
+      deleted_at: courses.deleted_at,
+      enrollment_count: sql<number>`count(${enrollments.id})`,
+    })
+    .from(courses)
+    .leftJoin(
+      enrollments,
+      and(eq(courses.id, enrollments.course_id), isNull(enrollments.deleted_at))
+    )
+    .where(isNull(courses.deleted_at))
+    .groupBy(courses.id)
+    .orderBy(desc(sql`enrollment_count`))
+    .limit(limit)
+    .all() as (Course & { enrollment_count: number })[];
 }

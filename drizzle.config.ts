@@ -1,10 +1,8 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import * as schema from "./db/schema";
+import { defineConfig } from "drizzle-kit";
 import fs from "fs";
 import path from "path";
 
-// Simple env loader for scripts running outside Next.js
+// Simple env loader for drizzle config
 if (!process.env.DATABASE_URL) {
   try {
     const envPath = path.resolve(process.cwd(), ".env");
@@ -29,20 +27,11 @@ if (!process.env.DATABASE_URL) {
   }
 }
 
-const dbUrl = process.env.DATABASE_URL || "database/students.db";
-
-let sqliteDb: Database.Database | null = null;
-let drizzleDb: ReturnType<typeof drizzle<typeof schema>> | null = null;
-
-export function getRawDb() {
-  sqliteDb ??= new Database(dbUrl);
-  return sqliteDb;
-}
-
-export function getDb() {
-  if (!drizzleDb) {
-    const rawDb = getRawDb();
-    drizzleDb = drizzle(rawDb, { schema });
-  }
-  return drizzleDb;
-}
+export default defineConfig({
+  schema: "./lib/db/schema.ts",
+  out: "./drizzle",
+  dialect: "sqlite",
+  dbCredentials: {
+    url: process.env.DATABASE_URL || "database/students.db",
+  },
+});

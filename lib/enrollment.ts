@@ -1,6 +1,8 @@
 import { getDb } from "./db";
 import { Enrollment } from "@/types/enrollment";
 import { addAuditLog } from "./audit";
+import { enrollments, students, courses } from "./db/schema";
+import { eq, and, isNull, sql } from "drizzle-orm";
 
 type enrollmentUpdate = Pick<Enrollment, "id" | "student_id" | "course_id">;
 
@@ -9,20 +11,31 @@ export function createEnrollment(
 ) {
   const db = getDb();
   const enrollmentDate = new Date().toISOString();
-  const student = db.prepare("SELECT name FROM students WHERE id = ? AND deleted_at IS NULL").get(enrollment.student_id) as { name: string } | undefined;
-  const course = db.prepare("SELECT name, code FROM courses WHERE id = ? AND deleted_at IS NULL").get(enrollment.course_id) as { name: string, code: string } | undefined;
+  
+  const student = db
+    .select({ name: students.name })
+    .from(students)
+    .where(and(eq(students.id, enrollment.student_id), isNull(students.deleted_at)))
+    .get() as { name: string } | undefined;
+    
+  const course = db
+    .select({ name: courses.name, code: courses.code })
+    .from(courses)
+    .where(and(eq(courses.id, enrollment.course_id), isNull(courses.deleted_at)))
+    .get() as { name: string; code: string } | undefined;
   
   if (!student || !course) {
     throw new Error("Student or Course not found or has been deleted.");
   }
 
   const result = db
-    .prepare(
-      `
-        INSERT INTO enrollments(student_id, course_id, enrollment_date) VALUES(?, ?, ?)
-    `,
-    )
-    .run(enrollment.student_id, enrollment.course_id, enrollmentDate);
+    .insert(enrollments)
+    .values({
+      student_id: enrollment.student_id,
+      course_id: enrollment.course_id,
+      enrollment_date: enrollmentDate,
+    })
+    .run();
 
   if (result.changes > 0 && student && course) {
     addAuditLog(
@@ -39,29 +52,50 @@ export function updateEnrollment(enrollment: enrollmentUpdate) {
   const db = getDb();
 
   return db
-    .prepare(
-      `
-        UPDATE enrollments SET student_id = ?, course_id = ? WHERE id = ? AND deleted_at IS NULL
-        `,
-    )
-    .run(enrollment.student_id, enrollment.course_id, enrollment.id);
+    .update(enrollments)
+    .set({
+      student_id: enrollment.student_id,
+      course_id: enrollment.course_id,
+    })
+    .where(and(eq(enrollments.id, enrollment.id), isNull(enrollments.deleted_at)))
+    .run();
 }
 
 export function deleteEnrollment(id: number) {
   const db = getDb();
   const deletedAt = new Date().toISOString();
-  const enrollment = db.prepare("SELECT * FROM enrollments WHERE id = ? AND deleted_at IS NULL").get(id) as Enrollment | undefined;
+  
+  const enrollment = db
+    .select()
+    .from(enrollments)
+    .where(and(eq(enrollments.id, id), isNull(enrollments.deleted_at)))
+    .get() as Enrollment | undefined;
+    
   let studentName = "";
   let courseCode = "";
   if (enrollment) {
-    const student = db.prepare("SELECT name FROM students WHERE id = ?").get(enrollment.student_id) as { name: string } | undefined;
-    const course = db.prepare("SELECT code FROM courses WHERE id = ?").get(enrollment.course_id) as { code: string } | undefined;
+    const student = db
+      .select({ name: students.name })
+      .from(students)
+      .where(eq(students.id, enrollment.student_id))
+      .get() as { name: string } | undefined;
+      
+    const course = db
+      .select({ code: courses.code })
+      .from(courses)
+      .where(eq(courses.id, enrollment.course_id))
+      .get() as { code: string } | undefined;
+      
     if (student) studentName = student.name;
     if (course) courseCode = course.code;
   }
   
   // Soft delete enrollment mapping
-  const result = db.prepare(`UPDATE enrollments SET deleted_at = ? WHERE id = ?`).run(deletedAt, id);
+  const result = db
+    .update(enrollments)
+    .set({ deleted_at: deletedAt })
+    .where(eq(enrollments.id, id))
+    .run();
 
   if (result.changes > 0 && enrollment) {
     addAuditLog(
@@ -77,14 +111,16 @@ export function deleteEnrollment(id: number) {
 export function getEnrollmentTrends(): { date: string; count: number }[] {
   const db = getDb();
   try {
+    const dateExpr = sql<string>`SUBSTR(${enrollments.enrollment_date}, 1, 10)`;
     return db
-      .prepare(`
-        SELECT SUBSTR(enrollment_date, 1, 10) as date, COUNT(*) as count
-        FROM enrollments
-        WHERE deleted_at IS NULL
-        GROUP BY date
-        ORDER BY date ASC
-      `)
+      .select({
+        date: dateExpr,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(enrollments)
+      .where(isNull(enrollments.deleted_at))
+      .groupBy(dateExpr)
+      .orderBy(dateExpr)
       .all() as { date: string; count: number }[];
   } catch (err) {
     console.error("Failed to query enrollment trends:", err);
@@ -103,15 +139,33 @@ export function updateEnrollmentGrade(id: number, grade: string | null) {
     throw new Error("Invalid grade format. Grade must be A, B, C, D, F, or empty.");
   }
 
-  const enrollment = db.prepare("SELECT * FROM enrollments WHERE id = ?").get(id) as Enrollment | undefined;
+  const enrollment = db
+    .select()
+    .from(enrollments)
+    .where(eq(enrollments.id, id))
+    .get() as Enrollment | undefined;
+    
   if (!enrollment) {
     throw new Error("Enrollment record not found.");
   }
   
-  const student = db.prepare("SELECT name FROM students WHERE id = ?").get(enrollment.student_id) as { name: string } | undefined;
-  const course = db.prepare("SELECT name, code FROM courses WHERE id = ?").get(enrollment.course_id) as { name: string, code: string } | undefined;
+  const student = db
+    .select({ name: students.name })
+    .from(students)
+    .where(eq(students.id, enrollment.student_id))
+    .get() as { name: string } | undefined;
+    
+  const course = db
+    .select({ name: courses.name, code: courses.code })
+    .from(courses)
+    .where(eq(courses.id, enrollment.course_id))
+    .get() as { name: string; code: string } | undefined;
 
-  const result = db.prepare("UPDATE enrollments SET grade = ? WHERE id = ?").run(formattedGrade, id);
+  const result = db
+    .update(enrollments)
+    .set({ grade: formattedGrade })
+    .where(eq(enrollments.id, id))
+    .run();
   
   if (result.changes > 0 && student && course) {
     const logStr = formattedGrade ? `to grade "${formattedGrade}"` : "to (in progress)";
@@ -125,4 +179,3 @@ export function updateEnrollmentGrade(id: number, grade: string | null) {
   }
   return result;
 }
-
