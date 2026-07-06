@@ -3,15 +3,11 @@ import { connection } from "next/server";
 import { getStudents } from "@/lib/db/queries/student";
 import { HomeHeader } from "@/components/HomeHeader";
 import { 
-  GraduationCap, 
+  GraduationCap,
   LayoutDashboard, 
   Users, 
   BookOpen, 
-  ArrowRight, 
-  Sparkles,
-  ShieldCheck,
-  Zap,
-  Globe2
+  ArrowRight
 } from "lucide-react";
 
 export default async function Home() {
@@ -39,9 +35,10 @@ export default async function Home() {
         
         <div className="max-w-3xl mx-auto flex flex-col items-center">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-indigo-200/80 dark:border-indigo-950 bg-indigo-50/50 dark:bg-indigo-950/20 text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-6">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>EduSuite V1.2 Registrar Update</span>
+            <GraduationCap className="h-3.5 w-3.5" />
+            <span>Registrar Command Center</span>
           </div>
+
           
           <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-zinc-900 dark:text-white leading-tight">
             The modern administrative core for <span className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 dark:from-indigo-400 dark:via-indigo-300 dark:to-purple-400 bg-clip-text text-transparent">academic operations</span>.
