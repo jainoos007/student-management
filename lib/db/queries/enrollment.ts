@@ -12,40 +12,44 @@ export function createEnrollment(
   const db = getDb();
   const enrollmentDate = new Date().toISOString();
   
-  const student = db
-    .select({ name: students.name })
-    .from(students)
-    .where(and(eq(students.id, enrollment.student_id), isNull(students.deleted_at)))
-    .get() as { name: string } | undefined;
+  return db.transaction((tx) => {
+    const student = tx
+      .select({ name: students.name })
+      .from(students)
+      .where(and(eq(students.id, enrollment.student_id), isNull(students.deleted_at)))
+      .get() as { name: string } | undefined;
+      
+    const course = tx
+      .select({ name: courses.name, code: courses.code })
+      .from(courses)
+      .where(and(eq(courses.id, enrollment.course_id), isNull(courses.deleted_at)))
+      .get() as { name: string; code: string } | undefined;
     
-  const course = db
-    .select({ name: courses.name, code: courses.code })
-    .from(courses)
-    .where(and(eq(courses.id, enrollment.course_id), isNull(courses.deleted_at)))
-    .get() as { name: string; code: string } | undefined;
-  
-  if (!student || !course) {
-    throw new Error("Student or Course not found or has been deleted.");
-  }
+    if (!student || !course) {
+      throw new Error("Student or Course not found or has been deleted.");
+    }
 
-  const result = db
-    .insert(enrollments)
-    .values({
-      student_id: enrollment.student_id,
-      course_id: enrollment.course_id,
-      enrollment_date: enrollmentDate,
-    })
-    .run();
+    const result = tx
+      .insert(enrollments)
+      .values({
+        student_id: enrollment.student_id,
+        course_id: enrollment.course_id,
+        enrollment_date: enrollmentDate,
+      })
+      .run();
 
-  if (result.changes > 0 && student && course) {
-    addAuditLog(
-      "ENROLL_STUDENT",
-      "ENROLLMENT",
-      Number(result.lastInsertRowid),
-      `Enrolled student ${student.name} in course ${course.name} [${course.code}].`
-    );
-  }
-  return result;
+    if (result.changes > 0 && student && course) {
+      addAuditLog(
+        "ENROLL_STUDENT",
+        "ENROLLMENT",
+        Number(result.lastInsertRowid),
+        `Enrolled student ${student.name} in course ${course.name} [${course.code}].`,
+        undefined,
+        tx
+      );
+    }
+    return result;
+  });
 }
 
 export function updateEnrollment(enrollment: enrollmentUpdate) {
@@ -65,47 +69,51 @@ export function deleteEnrollment(id: number) {
   const db = getDb();
   const deletedAt = new Date().toISOString();
   
-  const enrollment = db
-    .select()
-    .from(enrollments)
-    .where(and(eq(enrollments.id, id), isNull(enrollments.deleted_at)))
-    .get() as Enrollment | undefined;
+  return db.transaction((tx) => {
+    const enrollment = tx
+      .select()
+      .from(enrollments)
+      .where(and(eq(enrollments.id, id), isNull(enrollments.deleted_at)))
+      .get() as Enrollment | undefined;
+      
+    let studentName = "";
+    let courseCode = "";
+    if (enrollment) {
+      const student = tx
+        .select({ name: students.name })
+        .from(students)
+        .where(eq(students.id, enrollment.student_id))
+        .get() as { name: string } | undefined;
+        
+      const course = tx
+        .select({ code: courses.code })
+        .from(courses)
+        .where(eq(courses.id, enrollment.course_id))
+        .get() as { code: string } | undefined;
+        
+      if (student) studentName = student.name;
+      if (course) courseCode = course.code;
+    }
     
-  let studentName = "";
-  let courseCode = "";
-  if (enrollment) {
-    const student = db
-      .select({ name: students.name })
-      .from(students)
-      .where(eq(students.id, enrollment.student_id))
-      .get() as { name: string } | undefined;
-      
-    const course = db
-      .select({ code: courses.code })
-      .from(courses)
-      .where(eq(courses.id, enrollment.course_id))
-      .get() as { code: string } | undefined;
-      
-    if (student) studentName = student.name;
-    if (course) courseCode = course.code;
-  }
-  
-  // Soft delete enrollment mapping
-  const result = db
-    .update(enrollments)
-    .set({ deleted_at: deletedAt })
-    .where(eq(enrollments.id, id))
-    .run();
+    // Soft delete enrollment mapping
+    const result = tx
+      .update(enrollments)
+      .set({ deleted_at: deletedAt })
+      .where(eq(enrollments.id, id))
+      .run();
 
-  if (result.changes > 0 && enrollment) {
-    addAuditLog(
-      "UNENROLL_STUDENT",
-      "ENROLLMENT",
-      id,
-      `Unenrolled student ${studentName || `ID ${enrollment.student_id}`} from course ${courseCode || `ID ${enrollment.course_id}`} (soft delete).`
-    );
-  }
-  return result;
+    if (result.changes > 0 && enrollment) {
+      addAuditLog(
+        "UNENROLL_STUDENT",
+        "ENROLLMENT",
+        id,
+        `Unenrolled student ${studentName || `ID ${enrollment.student_id}`} from course ${courseCode || `ID ${enrollment.course_id}`} (soft delete).`,
+        undefined,
+        tx
+      );
+    }
+    return result;
+  });
 }
 
 export function getEnrollmentTrends(): { date: string; count: number }[] {
@@ -139,43 +147,46 @@ export function updateEnrollmentGrade(id: number, grade: string | null) {
     throw new Error("Invalid grade format. Grade must be A, B, C, D, F, or empty.");
   }
 
-  const enrollment = db
-    .select()
-    .from(enrollments)
-    .where(eq(enrollments.id, id))
-    .get() as Enrollment | undefined;
+  return db.transaction((tx) => {
+    const enrollment = tx
+      .select()
+      .from(enrollments)
+      .where(eq(enrollments.id, id))
+      .get() as Enrollment | undefined;
+      
+    if (!enrollment) {
+      throw new Error("Enrollment record not found.");
+    }
     
-  if (!enrollment) {
-    throw new Error("Enrollment record not found.");
-  }
-  
-  const student = db
-    .select({ name: students.name })
-    .from(students)
-    .where(eq(students.id, enrollment.student_id))
-    .get() as { name: string } | undefined;
-    
-  const course = db
-    .select({ name: courses.name, code: courses.code })
-    .from(courses)
-    .where(eq(courses.id, enrollment.course_id))
-    .get() as { name: string; code: string } | undefined;
+    const student = tx
+      .select({ name: students.name })
+      .from(students)
+      .where(eq(students.id, enrollment.student_id))
+      .get() as { name: string } | undefined;
+      
+    const course = tx
+      .select({ name: courses.name, code: courses.code })
+      .from(courses)
+      .where(eq(courses.id, enrollment.course_id))
+      .get() as { name: string; code: string } | undefined;
 
-  const result = db
-    .update(enrollments)
-    .set({ grade: formattedGrade })
-    .where(eq(enrollments.id, id))
-    .run();
-  
-  if (result.changes > 0 && student && course) {
-    const logStr = formattedGrade ? `to grade "${formattedGrade}"` : "to (in progress)";
-    addAuditLog(
-      "UPDATE_GRADE",
-      "ENROLLMENT",
-      id,
-      `Updated course grade for ${student.name} in ${course.name} [${course.code}] ${logStr}.`,
-      new Date().toISOString()
-    );
-  }
-  return result;
+    const result = tx
+      .update(enrollments)
+      .set({ grade: formattedGrade })
+      .where(eq(enrollments.id, id))
+      .run();
+    
+    if (result.changes > 0 && student && course) {
+      const logStr = formattedGrade ? `to grade "${formattedGrade}"` : "to (in progress)";
+      addAuditLog(
+        "UPDATE_GRADE",
+        "ENROLLMENT",
+        id,
+        `Updated course grade for ${student.name} in ${course.name} [${course.code}] ${logStr}.`,
+        new Date().toISOString(),
+        tx
+      );
+    }
+    return result;
+  });
 }

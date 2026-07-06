@@ -16,11 +16,12 @@ export function addAuditLog(
   entityType: string,
   entityId: number | null,
   details: string,
-  createdAt: string = new Date().toISOString()
+  createdAt: string = new Date().toISOString(),
+  tx?: any
 ) {
-  const db = getDb();
+  const dbInstance = tx ?? getDb();
   try {
-    return db
+    return dbInstance
       .insert(auditLogs)
       .values({
         action,
@@ -32,6 +33,9 @@ export function addAuditLog(
       .run();
   } catch (err) {
     console.error("Failed to write audit log:", err);
+    if (tx) {
+      throw err;
+    }
   }
 }
 

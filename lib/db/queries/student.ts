@@ -54,87 +54,101 @@ export function getStudents(page: number = 1, limit: number = 10): Student[] {
 export function addStudent(student: Omit<Student, "id" | "created_at">) {
   const db = getDb();
   const createdAt = new Date().toISOString();
-  const result = db
-    .insert(students)
-    .values({
-      name: student.name,
-      email: student.email,
-      age: student.age,
-      department: student.department,
-      created_at: createdAt,
-    })
-    .run();
+  
+  return db.transaction((tx) => {
+    const result = tx
+      .insert(students)
+      .values({
+        name: student.name,
+        email: student.email,
+        age: student.age,
+        department: student.department,
+        created_at: createdAt,
+      })
+      .run();
 
-  if (result.changes > 0) {
-    addAuditLog(
-      "CREATE_STUDENT",
-      "STUDENT",
-      Number(result.lastInsertRowid),
-      `Registered student ${student.name} (${student.email}) in ${student.department} department.`,
-    );
-  }
-  return result;
+    if (result.changes > 0) {
+      addAuditLog(
+        "CREATE_STUDENT",
+        "STUDENT",
+        Number(result.lastInsertRowid),
+        `Registered student ${student.name} (${student.email}) in ${student.department} department.`,
+        undefined,
+        tx
+      );
+    }
+    return result;
+  });
 }
 
 export function updateStudent(student: StudentUpdate) {
   const db = getDb();
-  const result = db
-    .update(students)
-    .set({
-      name: student.name,
-      email: student.email,
-      age: student.age,
-      department: student.department,
-    })
-    .where(and(eq(students.id, student.id), isNull(students.deleted_at)))
-    .run();
+  
+  return db.transaction((tx) => {
+    const result = tx
+      .update(students)
+      .set({
+        name: student.name,
+        email: student.email,
+        age: student.age,
+        department: student.department,
+      })
+      .where(and(eq(students.id, student.id), isNull(students.deleted_at)))
+      .run();
 
-  if (result.changes > 0) {
-    addAuditLog(
-      "UPDATE_STUDENT",
-      "STUDENT",
-      student.id,
-      `Updated details for student ${student.name} (age ${student.age}, dept ${student.department}).`,
-    );
-  }
-  return result;
+    if (result.changes > 0) {
+      addAuditLog(
+        "UPDATE_STUDENT",
+        "STUDENT",
+        student.id,
+        `Updated details for student ${student.name} (age ${student.age}, dept ${student.department}).`,
+        undefined,
+        tx
+      );
+    }
+    return result;
+  });
 }
 
 export function deleteStudent(id: number) {
   const db = getDb();
   const deletedAt = new Date().toISOString();
   
-  const student = db
-    .select()
-    .from(students)
-    .where(and(eq(students.id, id), isNull(students.deleted_at)))
-    .get() as Student | undefined;
-  
-  // Soft delete student record
-  const result = db
-    .update(students)
-    .set({ deleted_at: deletedAt })
-    .where(eq(students.id, id))
-    .run();
-
-  // Soft delete associated enrollment mappings
-  if (result.changes > 0) {
-    db
-      .update(enrollments)
+  return db.transaction((tx) => {
+    const student = tx
+      .select()
+      .from(students)
+      .where(and(eq(students.id, id), isNull(students.deleted_at)))
+      .get() as Student | undefined;
+    
+    // Soft delete student record
+    const result = tx
+      .update(students)
       .set({ deleted_at: deletedAt })
-      .where(and(eq(enrollments.student_id, id), isNull(enrollments.deleted_at)))
+      .where(eq(students.id, id))
       .run();
-  }
 
-  if (result.changes > 0 && student) {
-    addAuditLog(
-      "DELETE_STUDENT",
-      "STUDENT",
-      id,
-      `Deleted student record for ${student.name} (${student.email}) (soft delete).`,
-    );
-  }
-  return result;
+    // Soft delete associated enrollment mappings
+    if (result.changes > 0) {
+      tx
+        .update(enrollments)
+        .set({ deleted_at: deletedAt })
+        .where(and(eq(enrollments.student_id, id), isNull(enrollments.deleted_at)))
+        .run();
+    }
+
+    if (result.changes > 0 && student) {
+      addAuditLog(
+        "DELETE_STUDENT",
+        "STUDENT",
+        id,
+        `Deleted student record for ${student.name} (${student.email}) (soft delete).`,
+        undefined,
+        tx
+      );
+    }
+    return result;
+  });
 }
 
 export function searchStudents(query: string): Student[] {

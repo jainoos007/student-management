@@ -21,85 +21,99 @@ export function getCourses(page: number = 1, limit: number = 10) {
 export function addCourses(course: Omit<Course, "id" | "created_at">) {
   const db = getDb();
   const created_at = new Date().toISOString();
-  const result = db
-    .insert(courses)
-    .values({
-      name: course.name,
-      code: course.code,
-      credits: course.credits,
-      created_at,
-    })
-    .run();
+  
+  return db.transaction((tx) => {
+    const result = tx
+      .insert(courses)
+      .values({
+        name: course.name,
+        code: course.code,
+        credits: course.credits,
+        created_at,
+      })
+      .run();
 
-  if (result.changes > 0) {
-    addAuditLog(
-      "CREATE_COURSE",
-      "COURSE",
-      Number(result.lastInsertRowid),
-      `Created course catalog entry ${course.name} [${course.code}] worth ${course.credits} credits.`
-    );
-  }
-  return result;
+    if (result.changes > 0) {
+      addAuditLog(
+        "CREATE_COURSE",
+        "COURSE",
+        Number(result.lastInsertRowid),
+        `Created course catalog entry ${course.name} [${course.code}] worth ${course.credits} credits.`,
+        undefined,
+        tx
+      );
+    }
+    return result;
+  });
 }
 
 export function updateCourse(course: CourseUpdate) {
   const db = getDb();
-  const result = db
-    .update(courses)
-    .set({
-      name: course.name,
-      code: course.code,
-      credits: course.credits,
-    })
-    .where(and(eq(courses.id, course.id), isNull(courses.deleted_at)))
-    .run();
+  
+  return db.transaction((tx) => {
+    const result = tx
+      .update(courses)
+      .set({
+        name: course.name,
+        code: course.code,
+        credits: course.credits,
+      })
+      .where(and(eq(courses.id, course.id), isNull(courses.deleted_at)))
+      .run();
 
-  if (result.changes > 0) {
-    addAuditLog(
-      "UPDATE_COURSE",
-      "COURSE",
-      course.id,
-      `Updated course detail parameters for ${course.name} [${course.code}] (credits: ${course.credits}).`
-    );
-  }
-  return result;
+    if (result.changes > 0) {
+      addAuditLog(
+        "UPDATE_COURSE",
+        "COURSE",
+        course.id,
+        `Updated course detail parameters for ${course.name} [${course.code}] (credits: ${course.credits}).`,
+        undefined,
+        tx
+      );
+    }
+    return result;
+  });
 }
 
 export function deleteCourse(id: number) {
   const db = getDb();
   const deletedAt = new Date().toISOString();
   
-  const course = db
-    .select()
-    .from(courses)
-    .where(and(eq(courses.id, id), isNull(courses.deleted_at)))
-    .get() as Course | undefined;
-  
-  // Soft delete course record
-  const result = db
-    .update(courses)
-    .set({ deleted_at: deletedAt })
-    .where(eq(courses.id, id))
-    .run();
-
-  // Soft delete enrollments mapping for this course
-  if (result.changes > 0) {
-    db
-      .update(enrollments)
+  return db.transaction((tx) => {
+    const course = tx
+      .select()
+      .from(courses)
+      .where(and(eq(courses.id, id), isNull(courses.deleted_at)))
+      .get() as Course | undefined;
+    
+    // Soft delete course record
+    const result = tx
+      .update(courses)
       .set({ deleted_at: deletedAt })
-      .where(and(eq(enrollments.course_id, id), isNull(enrollments.deleted_at)))
+      .where(eq(courses.id, id))
       .run();
-  }
 
-  if (result.changes > 0 && course) {
-    addAuditLog(
-      "DELETE_COURSE",
-      "COURSE",
-      id,
-      `Removed course catalog listing for ${course.name} [${course.code}] (soft delete).`
-    );
-  }
-  return result;
+    // Soft delete enrollments mapping for this course
+    if (result.changes > 0) {
+      tx
+        .update(enrollments)
+        .set({ deleted_at: deletedAt })
+        .where(and(eq(enrollments.course_id, id), isNull(enrollments.deleted_at)))
+        .run();
+    }
+
+    if (result.changes > 0 && course) {
+      addAuditLog(
+        "DELETE_COURSE",
+        "COURSE",
+        id,
+        `Removed course catalog listing for ${course.name} [${course.code}] (soft delete).`,
+        undefined,
+        tx
+      );
+    }
+    return result;
+  });
 }
 
 export function getStudentCourses(studentId: number) {

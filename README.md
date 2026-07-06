@@ -80,7 +80,7 @@ EduSuite provides a modern administrative interface that acts as the single sour
 | ------------------- | -------------------------------------------------------------------------------- |
 | **Frontend**        | React 19, Next.js 16 (App Router), Lucide React, Framer Motion, `@base-ui/react` |
 | **Backend**         | Next.js API Route Handlers (Node.js runtime)                                     |
-| **Database**        | SQLite, powered by the high-performance `better-sqlite3` driver                  |
+| **Database**        | SQLite & Drizzle ORM, powered by the high-performance `better-sqlite3` driver     |
 | **Styling**         | Tailwind CSS v4, Vanilla CSS variables                                           |
 | **State & Dialogs** | React State, Sonner (Toast system), Radix-based Shadcn Dialog components         |
 | **Validation**      | Zod (for runtime API payload validation)                                         |
@@ -137,15 +137,24 @@ graph TD
 │   └── ThemeToggle.tsx      # Dark/Light mode selector
 ├── database/
 │   └── students.db          # SQLite persistent database file
-├── lib/                     # Server-side business logic & query functions
-│   ├── audit.ts             # Audit trail queries
-│   ├── course.ts            # Course registry queries
-│   ├── db.ts                # SQLite driver wrapper (better-sqlite3)
-│   ├── enrollment.ts        # Course enrollment queries
+├── lib/                     # Application helper libraries & utilities
+│   ├── db/                  # Drizzle database layer
+│   │   ├── queries/         # Database query wrappers using Drizzle ORM
+│   │   │   ├── audit.ts     # Audit log queries
+│   │   │   ├── course.ts    # Course registry queries
+│   │   │   ├── enrollment.ts # Enrollment queries
+│   │   │   └── student.ts   # Student registry queries
+│   │   ├── schema/          # Drizzle ORM schema definitions
+│   │   │   ├── course.ts    # Courses table definition (with soft delete)
+│   │   │   ├── enrollment.ts # Enrollments table definition (with soft delete, grades)
+│   │   │   ├── index.ts     # Schema exporter
+│   │   │   └── student.ts   # Students & Audit Logs table definitions
+│   │   ├── index.ts         # SQLite & Drizzle initialization
+│   │   └── utils.ts         # DB-specific utility files
 │   ├── schemas.ts           # Zod validation schemas
-│   └── student.ts           # Student registry queries
+│   └── utils.ts             # Common UI/utility helpers
 ├── scripts/
-│   ├── init-db.ts           # Database initialization (DDL)
+│   ├── init-db.ts           # Database initialization (DDL via drizzle-kit push)
 │   └── seed.ts              # Database seeding script (mock records)
 ├── types/                   # Unified TypeScript definitions
 ├── package.json
@@ -184,7 +193,7 @@ graph TD
    npx tsx scripts/init-db.ts
 
    # Seed database with dummy records
-   npm run seed
+   npm run db:seed
    ```
 
 4. **Run the Development Server**
@@ -251,46 +260,78 @@ EduSuite runs out-of-the-box using local SQLite configurations. No external data
 
 ---
 
-## Database Schema
+## Database Schema (Drizzle ORM)
 
-```sql
--- Students table
-CREATE TABLE IF NOT EXISTS students (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL UNIQUE,
-  age INTEGER NOT NULL,
-  department TEXT NOT NULL,
-  created_at TEXT NOT NULL
-);
+EduSuite uses Drizzle ORM to define and query the SQLite database. Below are the schema definitions mapping TypeScript schemas to SQLite tables.
 
--- Courses table
-CREATE TABLE IF NOT EXISTS courses (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  code TEXT NOT NULL UNIQUE,
-  credits INTEGER NOT NULL,
-  created_at TEXT NOT NULL
-);
+### 🧑‍🎓 Students Table (`lib/db/schema/student.ts`)
+```typescript
+import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
 
--- Enrollments join table (Many-to-Many relationship)
-CREATE TABLE IF NOT EXISTS enrollments (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  student_id INTEGER NOT NULL,
-  course_id INTEGER NOT NULL,
-  enrollment_date TEXT NOT NULL,
-  FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
-  FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
-  UNIQUE(student_id, course_id)
-);
-
--- System Audit Log table
-CREATE TABLE IF NOT EXISTS audit_logs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  action TEXT NOT NULL,
-  entity_type TEXT NOT NULL,
-  entity_id INTEGER,
-  details TEXT NOT NULL,
-  created_at TEXT NOT NULL
-);
+export const students = sqliteTable('students', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  email: text('email').unique().notNull(),
+  age: integer('age').notNull(),
+  department: text('department').notNull(),
+  created_at: text('created_at').notNull(),
+  deleted_at: text('deleted_at'), // Soft delete
+});
 ```
+
+### 📚 Courses Table (`lib/db/schema/course.ts`)
+```typescript
+import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
+
+export const courses = sqliteTable('courses', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  code: text('code').unique().notNull(),
+  credits: integer('credits').notNull(),
+  created_at: text('created_at').notNull(),
+  deleted_at: text('deleted_at'), // Soft delete
+});
+```
+
+### 🔄 Enrollments Join Table (`lib/db/schema/enrollment.ts`)
+```typescript
+import { sqliteTable, integer, text, unique } from 'drizzle-orm/sqlite-core';
+import { students } from './student';
+import { courses } from './course';
+
+export const enrollments = sqliteTable('enrollments', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  student_id: integer('student_id').notNull().references(() => students.id, { onDelete: 'cascade' }),
+  course_id: integer('course_id').notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  enrollment_date: text('enrollment_date').notNull(),
+  deleted_at: text('deleted_at'), // Soft delete
+  grade: text('grade'),
+}, (t) => [
+  unique().on(t.student_id, t.course_id)
+]);
+```
+
+### ⚡ System Audit Log Table (`lib/db/schema/student.ts`)
+```typescript
+export const auditLogs = sqliteTable('audit_logs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  action: text('action').notNull(), // CREATE, UPDATE, DELETE, ENROLL, UNENROLL
+  entity_type: text('entity_type').notNull(), // student, course, enrollment
+  entity_id: integer('entity_id'),
+  details: text('details').notNull(),
+  created_at: text('created_at').notNull(),
+});
+```
+
+---
+
+## Database Migration & Management
+
+We use Drizzle Kit to manage SQLite migrations and schema modifications:
+
+- **Generate Migrations:** `npm run db:generate`
+- **Apply Migrations:** `npm run db:migrate`
+- **Push Schema changes directly (Development):** `npm run db:push` or `npx tsx scripts/init-db.ts`
+- **Open Drizzle Studio UI:** `npm run db:studio`
+- **Re-create Database (Fresh):** `npm run db:fresh`
+- **Seed Mock Data:** `npm run db:seed`

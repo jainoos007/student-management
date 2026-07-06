@@ -41,6 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 ToDo.md
+/doc
+/docs
+
 
 # database
 /database/*.db
