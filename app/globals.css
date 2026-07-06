@@ -94,3 +94,24 @@ body {
 .disable-transitions *:after {
   transition: none !important;
 }
+
+/* Print Layout Optimization (replaces popup windows to avoid popup blockers) */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  .printable-area, .printable-area * {
+    visibility: visible !important;
+  }
+  .printable-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    display: block !important;
+    background: white !important;
+    color: black !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}

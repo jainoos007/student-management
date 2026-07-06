@@ -245,88 +245,9 @@ export default function StudentDetailPage() {
     }
   }
 
-  // Print Academic Transcript
+  // Print Academic Transcript (using native window.print() and CSS media query selectors)
   function handlePrintTranscript() {
-    if (!student) return;
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-
-    const totalCredits = enrolledCourses.reduce((sum, c) => sum + c.credits, 0);
-    const gradePoints: Record<string, number> = { A: 4, B: 3, C: 2, D: 1, F: 0 };
-    
-    let totalPoints = 0;
-    let gradedCredits = 0;
-    enrolledCourses.forEach(c => {
-      if (c.grade && c.grade.toUpperCase() in gradePoints) {
-        totalPoints += gradePoints[c.grade.toUpperCase()] * c.credits;
-        gradedCredits += c.credits;
-      }
-    });
-    const cumulativeGpa = gradedCredits > 0 ? (totalPoints / gradedCredits).toFixed(2) : "N/A";
-
-    const html = `
-      <html>
-        <head>
-          <title>Academic Transcript - ${student.name}</title>
-          <style>
-            body { font-family: sans-serif; padding: 40px; color: #18181b; }
-            .header { border-bottom: 2px solid #18181b; padding-bottom: 20px; margin-bottom: 30px; }
-            .title { font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; }
-            .meta { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 30px; }
-            th, td { border: 1px solid #e4e4e7; padding: 12px; text-align: left; font-size: 14px; }
-            th { background-color: #f4f4f5; font-weight: bold; }
-            .summary { margin-top: 30px; font-size: 16px; font-weight: bold; border-top: 2px solid #18181b; padding-top: 15px; text-align: right; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="title">Academic Transcript</div>
-            <div class="meta">
-              <div><strong>Student Name:</strong> ${student.name}</div>
-              <div><strong>Email:</strong> ${student.email}</div>
-              <div><strong>Department:</strong> ${student.department}</div>
-              <div><strong>Date Generated:</strong> ${new Date().toLocaleDateString()}</div>
-            </div>
-          </div>
-          <h3>Enrolled Courses</h3>
-          ${enrolledCourses.length === 0 ? `
-            <p style="font-style: italic; color: #71717a;">No course enrollments found for this student.</p>
-          ` : `
-            <table>
-              <thead>
-                <tr>
-                  <th style="width: 20%;">Course Code</th>
-                  <th style="width: 45%;">Course Name</th>
-                  <th style="width: 15%;">Credits</th>
-                  <th style="width: 20%;">Grade</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${enrolledCourses.map(course => `
-                  <tr>
-                    <td><strong>${course.code}</strong></td>
-                    <td>${course.name}</td>
-                    <td>${course.credits}</td>
-                    <td>${course.grade ? course.grade.toUpperCase() : `<span style="color: #71717a; font-style: italic;">In Progress</span>`}</td>
-                  </tr>
-                `).join("")}
-              </tbody>
-            </table>
-          `}
-          <div class="summary">
-            Total Courses: ${enrolledCourses.length} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
-            Total Credits: ${totalCredits} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
-            Cumulative GPA: ${cumulativeGpa}
-          </div>
-          <script>
-            window.onload = function() { window.print(); window.close(); }
-          </script>
-        </body>
-      </html>
-    `;
-    printWindow.document.write(html);
-    printWindow.document.close();
+    window.print();
   }
 
   // Calculate Cumulative GPA for displays
@@ -708,6 +629,64 @@ export default function StudentDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Hidden printable transcript area rendered in-page to avoid popup blocker blocks */}
+      <div className="printable-area hidden print:block p-10 bg-white text-black">
+        <div className="border-b-2 border-black pb-4 mb-8">
+          <div className="text-2xl font-bold uppercase tracking-wider">Academic Transcript</div>
+          <div className="mt-4 grid grid-cols-2 gap-2 text-sm text-black">
+            <div><strong>Student Name:</strong> {student.name}</div>
+            <div><strong>Email:</strong> {student.email}</div>
+            <div><strong>Department:</strong> {student.department}</div>
+            <div><strong>Date Generated:</strong> {new Date().toLocaleDateString()}</div>
+          </div>
+        </div>
+        
+        <h3 className="text-lg font-bold mb-4 text-black">Enrolled Courses</h3>
+        {enrolledCourses.length === 0 ? (
+          <p className="italic text-zinc-500">No course enrollments found for this student.</p>
+        ) : (
+          <table className="w-full border-collapse border border-zinc-300">
+            <thead>
+              <tr className="bg-zinc-100">
+                <th className="border border-zinc-300 p-3 text-left w-1/5 text-black">Course Code</th>
+                <th className="border border-zinc-300 p-3 text-left w-[45%] text-black">Course Name</th>
+                <th className="border border-zinc-300 p-3 text-left w-[15%] text-black">Credits</th>
+                <th className="border border-zinc-300 p-3 text-left w-1/5 text-black">Grade</th>
+              </tr>
+            </thead>
+            <tbody>
+              {enrolledCourses.map((course) => (
+                <tr key={course.id}>
+                  <td className="border border-zinc-200 p-3 font-bold text-black">{course.code}</td>
+                  <td className="border border-zinc-200 p-3 text-black">{course.name}</td>
+                  <td className="border border-zinc-200 p-3 text-black">{course.credits}</td>
+                  <td className="border border-zinc-200 p-3 text-black">
+                    {course.grade ? course.grade.toUpperCase() : "In Progress"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        <div className="mt-8 pt-4 border-t-2 border-black font-bold text-right text-base text-black">
+          Total Courses: {enrolledCourses.length} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          Total Credits: {enrolledCourses.reduce((sum, c) => sum + c.credits, 0)} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          Cumulative GPA: {(() => {
+            const gradePoints: Record<string, number> = { A: 4, B: 3, C: 2, D: 1, F: 0 };
+            let totalPoints = 0;
+            let gradedCredits = 0;
+            enrolledCourses.forEach(c => {
+              if (c.grade && c.grade.toUpperCase() in gradePoints) {
+                totalPoints += gradePoints[c.grade.toUpperCase()] * c.credits;
+                gradedCredits += c.credits;
+              }
+            });
+            return gradedCredits > 0 ? (totalPoints / gradedCredits).toFixed(2) : "N/A";
+          })()}
+        </div>
+      </div>
     </main>
   );
 }
