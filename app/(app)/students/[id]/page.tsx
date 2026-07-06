@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition, FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useRouter } from "next/navigation";
 import { 
   ArrowLeft, 
@@ -72,6 +73,11 @@ export default function StudentDetailPage() {
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   const [isPending, startTransition] = useTransition();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Load student records
   async function loadStudentData() {
@@ -630,63 +636,66 @@ export default function StudentDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Hidden printable transcript area rendered in-page to avoid popup blocker blocks */}
-      <div className="printable-area hidden print:block p-10 bg-white text-black">
-        <div className="border-b-2 border-black pb-4 mb-8">
-          <div className="text-2xl font-bold uppercase tracking-wider">Academic Transcript</div>
-          <div className="mt-4 grid grid-cols-2 gap-2 text-sm text-black">
-            <div><strong>Student Name:</strong> {student.name}</div>
-            <div><strong>Email:</strong> {student.email}</div>
-            <div><strong>Department:</strong> {student.department}</div>
-            <div><strong>Date Generated:</strong> {new Date().toLocaleDateString()}</div>
+      {/* Hidden printable transcript area rendered in-page under document.body via portal to avoid layout shifts/extra pages */}
+      {mounted && createPortal(
+        <div className="printable-area hidden print:block p-10 bg-white text-black">
+          <div className="border-b-2 border-black pb-4 mb-8">
+            <div className="text-2xl font-bold uppercase tracking-wider">Academic Transcript</div>
+            <div className="mt-4 grid grid-cols-2 gap-2 text-sm text-black">
+              <div><strong>Student Name:</strong> {student.name}</div>
+              <div><strong>Email:</strong> {student.email}</div>
+              <div><strong>Department:</strong> {student.department}</div>
+              <div><strong>Date Generated:</strong> {new Date().toLocaleDateString()}</div>
+            </div>
           </div>
-        </div>
-        
-        <h3 className="text-lg font-bold mb-4 text-black">Enrolled Courses</h3>
-        {enrolledCourses.length === 0 ? (
-          <p className="italic text-zinc-500">No course enrollments found for this student.</p>
-        ) : (
-          <table className="w-full border-collapse border border-zinc-300">
-            <thead>
-              <tr className="bg-zinc-100">
-                <th className="border border-zinc-300 p-3 text-left w-1/5 text-black">Course Code</th>
-                <th className="border border-zinc-300 p-3 text-left w-[45%] text-black">Course Name</th>
-                <th className="border border-zinc-300 p-3 text-left w-[15%] text-black">Credits</th>
-                <th className="border border-zinc-300 p-3 text-left w-1/5 text-black">Grade</th>
-              </tr>
-            </thead>
-            <tbody>
-              {enrolledCourses.map((course) => (
-                <tr key={course.id}>
-                  <td className="border border-zinc-200 p-3 font-bold text-black">{course.code}</td>
-                  <td className="border border-zinc-200 p-3 text-black">{course.name}</td>
-                  <td className="border border-zinc-200 p-3 text-black">{course.credits}</td>
-                  <td className="border border-zinc-200 p-3 text-black">
-                    {course.grade ? course.grade.toUpperCase() : "In Progress"}
-                  </td>
+          
+          <h3 className="text-lg font-bold mb-4 text-black">Enrolled Courses</h3>
+          {enrolledCourses.length === 0 ? (
+            <p className="italic text-zinc-500">No course enrollments found for this student.</p>
+          ) : (
+            <table className="w-full border-collapse border border-zinc-300">
+              <thead>
+                <tr className="bg-zinc-100">
+                  <th className="border border-zinc-300 p-3 text-left w-1/5 text-black">Course Code</th>
+                  <th className="border border-zinc-300 p-3 text-left w-[45%] text-black">Course Name</th>
+                  <th className="border border-zinc-300 p-3 text-left w-[15%] text-black">Credits</th>
+                  <th className="border border-zinc-300 p-3 text-left w-1/5 text-black">Grade</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              </thead>
+              <tbody>
+                {enrolledCourses.map((course) => (
+                  <tr key={course.id}>
+                    <td className="border border-zinc-200 p-3 font-bold text-black">{course.code}</td>
+                    <td className="border border-zinc-200 p-3 text-black">{course.name}</td>
+                    <td className="border border-zinc-200 p-3 text-black">{course.credits}</td>
+                    <td className="border border-zinc-200 p-3 text-black">
+                      {course.grade ? course.grade.toUpperCase() : "In Progress"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
 
-        <div className="mt-8 pt-4 border-t-2 border-black font-bold text-right text-base text-black">
-          Total Courses: {enrolledCourses.length} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          Total Credits: {enrolledCourses.reduce((sum, c) => sum + c.credits, 0)} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          Cumulative GPA: {(() => {
-            const gradePoints: Record<string, number> = { A: 4, B: 3, C: 2, D: 1, F: 0 };
-            let totalPoints = 0;
-            let gradedCredits = 0;
-            enrolledCourses.forEach(c => {
-              if (c.grade && c.grade.toUpperCase() in gradePoints) {
-                totalPoints += gradePoints[c.grade.toUpperCase()] * c.credits;
-                gradedCredits += c.credits;
-              }
-            });
-            return gradedCredits > 0 ? (totalPoints / gradedCredits).toFixed(2) : "N/A";
-          })()}
-        </div>
-      </div>
+          <div className="mt-8 pt-4 border-t-2 border-black font-bold text-right text-base text-black">
+            Total Courses: {enrolledCourses.length} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Total Credits: {enrolledCourses.reduce((sum, c) => sum + c.credits, 0)} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Cumulative GPA: {(() => {
+              const gradePoints: Record<string, number> = { A: 4, B: 3, C: 2, D: 1, F: 0 };
+              let totalPoints = 0;
+              let gradedCredits = 0;
+              enrolledCourses.forEach(c => {
+                if (c.grade && c.grade.toUpperCase() in gradePoints) {
+                  totalPoints += gradePoints[c.grade.toUpperCase()] * c.credits;
+                  gradedCredits += c.credits;
+                }
+              });
+              return gradedCredits > 0 ? (totalPoints / gradedCredits).toFixed(2) : "N/A";
+            })()}
+          </div>
+        </div>,
+        document.body
+      )}
     </main>
   );
 }
