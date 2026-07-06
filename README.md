@@ -2,7 +2,10 @@
 
 > The modern, high-performance administrative core for academic operations.
 
+**Live Demo:** [student-management.jainoos.xyz](https://student-management.jainoos.xyz/)
+
 EduSuite is a production-ready academic registry and curriculum management portal. It serves as a unified command center for university registrars, advisors, and administrators to orchestrate student directories, manage academic course catalogs, handle student enrollments, and track system operations with a real-time audit trail.
+
 
 ---
 
